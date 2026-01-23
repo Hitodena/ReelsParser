@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from ..custom_enums import LogLevel
+from app.custom_enums import LogLevel
 from .env import EnvironmentSettings
 from .settings import Logs
 

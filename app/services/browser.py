@@ -11,7 +11,7 @@ from playwright.async_api import (
     async_playwright,
 )
 
-from ..core import Config
+from app.core import Config
 
 
 class BrowserManager:

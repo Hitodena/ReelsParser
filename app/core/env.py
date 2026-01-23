@@ -3,8 +3,8 @@ from typing import Sequence
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .. import ENV_FILE
-from ..custom_enums import AppEnvironment, LogLevel
+from app import ENV_FILE
+from app.custom_enums import AppEnvironment, LogLevel
 
 
 class EnvironmentSettings(BaseSettings):
@@ -19,10 +19,11 @@ class EnvironmentSettings(BaseSettings):
     log_level: LogLevel = Field(default=LogLevel.DEBUG)
     debug: bool = Field(default=True)
 
-    redis_url: str = Field(default="redis://localhost:6379")
-    celery_broker_url: str = Field(default="redis://localhost:6379/1")
-    celery_result_backend: str = Field(default="redis://localhost:6379/2")
-    celery_cache: str = Field(default="redis://localhost:6379/3")
+    db_user: str = Field(default="postgres")
+    db_password: str = Field(default="postgres")
+    db_host: str = Field(default="localhost")
+    db_port: int = Field(default=5432)
+    db_name: str = Field(default="postgres")
 
     cors_allow_origins: Sequence[str] = Field(default=["*"])
     cors_allow_credentials: bool = Field(default=True)
@@ -40,3 +41,6 @@ class EnvironmentSettings(BaseSettings):
         "{name}:{function}:{line} | "
         "{message} | {extra}"
     )
+
+    def get_db_url(self) -> str:
+        return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
