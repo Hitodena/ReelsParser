@@ -20,7 +20,12 @@ async def login_to_instagram(username, password):
         with open("cookies.json", "r") as file:
             logger.info("Adding cookies")
             await ctx.add_cookies(json.load(file))
-        await page.goto(config.parsing.instagram_login_url)
+        await page.goto(
+            config.parsing.instagram_login_url, wait_until="domcontentloaded"
+        )
+        if page.url == "https://www.instagram.com/":
+            logger.info("Cookies loaded and login dont needed")
+            return
         logger.info("Logging in")
         textbox_email = page.get_by_role(
             "textbox", name="Phone number, username, or email"
