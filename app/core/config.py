@@ -7,7 +7,7 @@ from pydantic_settings import (
 
 from .env import EnvironmentSettings
 from .logging_settings import LoggerSettings
-from .settings import Dentifiers, Logs, Network, Parsing, Retries, Timeouts
+from .settings import Identifiers, Logs, Network, Parsing, Retries, Timeouts
 
 
 class Config(BaseSettings):
@@ -19,7 +19,7 @@ class Config(BaseSettings):
     network: Network = Field(default_factory=Network)
     retries: Retries = Field(default_factory=Retries)
     parsing: Parsing = Field(default_factory=Parsing)
-    dentifiers: Dentifiers = Field(default_factory=Dentifiers)
+    identifiers: Identifiers = Field(default_factory=Identifiers)
 
 
 config = Config()

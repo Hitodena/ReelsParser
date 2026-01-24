@@ -53,7 +53,7 @@ class DatabaseSessionManager:
                 logger.info("Yielding session")
                 yield session
                 elapsed_time = time.perf_counter() - start_time
-                logger.bind(execution_time=f"{elapsed_time}:.2f").success(
+                logger.bind(execution_time=f"{elapsed_time:.2f}").success(
                     "Session yielded successfully"
                 )
             except Exception:
@@ -72,7 +72,7 @@ class DatabaseSessionManager:
                 logger.info("Yielding connection")
                 yield connection
                 elapsed_time = time.perf_counter() - start_time
-                logger.bind(execution_time=f"{elapsed_time}:.2f").success(
+                logger.bind(execution_time=f"{elapsed_time:.2f}").success(
                     "Connection yielded successfully"
                 )
             except Exception:
