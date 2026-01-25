@@ -7,10 +7,14 @@ import httpx
 from loguru import logger
 
 from app.core import Config
+from app.services import ProxyManager
 
 
 async def fetch_instagram_reels(
-    data: dict, client: httpx.AsyncClient, config: Config, profile_link: str
+    data: dict,
+    client: httpx.AsyncClient,
+    config: Config,
+    profile_link: str,
 ) -> dict:
     """
     Fetches Instagram Reels data using the provided credentials and parameters.
@@ -70,7 +74,7 @@ def parse_instagram_data(data: dict, profile_link: str) -> list[dict]:
     Returns:
         list[dict]: List of parsed reels with url, views, likes, comments, ER.
     """
-    reels = []
+    reels: list = []
     edges = data["data"]["xdt_api__v1__clips__user__connection_v2"]["edges"]
     logger.bind(profile_link=profile_link, edges_count=len(edges)).info(
         "Parsing Instagram data"
@@ -102,7 +106,11 @@ def parse_instagram_data(data: dict, profile_link: str) -> list[dict]:
 
 
 async def fetch_all_instagram_reels(
-    credentials: dict, config: Config, max_reels: int | None, profile_link: str
+    credentials: dict,
+    config: Config,
+    max_reels: int | None,
+    profile_link: str,
+    proxy_manager: ProxyManager,
 ) -> list[dict]:
     """
     Fetches all Instagram Reels with pagination and error handling.
@@ -110,6 +118,8 @@ async def fetch_all_instagram_reels(
     Args:
         credentials (dict): Initial credentials from extract_instagram_credentials.
         profile_link (str): Profile link for logging.
+        max_reels (int): Max amount of reels to parse.
+        proxy_manager (ProxyManager): Proxy manager object.
 
     Returns:
         list[dict]: List of all reels with ER calculated.
@@ -124,9 +134,13 @@ async def fetch_all_instagram_reels(
 
     # Load data from data (cookies, headers, data)
     data = json.loads(json.dumps(credentials))
+    proxy = await proxy_manager.get_least_used()
+    proxy_formatted = None
+    if proxy:
+        proxy_formatted = proxy.to_httpx_proxy()
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(proxy=proxy_formatted) as client:
             while has_next:
                 retries = 0
 
@@ -162,28 +176,37 @@ async def fetch_all_instagram_reels(
 
                         break
 
-                    except httpx.HTTPStatusError as e:
-                        if e.response.status_code == 429:
+                    except httpx.HTTPStatusError as exc:
+                        if exc.response.status_code == 429:
                             # Rate limit
                             wait_time = config.network.rate_limit_wait_base * (
                                 config.network.backoff_factor**retries
                             )
                             logger.bind(
-                                status_code=e.response.status_code,
+                                error_message=exc,
+                                status_code=exc.response.status_code,
                                 wait_time=wait_time,
                                 retries=retries,
                             ).warning("Rate limit hit")
                             await asyncio.sleep(wait_time)
                             retries += 1
+                            if proxy:
+                                await proxy_manager.block_proxy(
+                                    proxy.identifier, 10
+                                )
                         else:
                             raise
 
                     except (httpx.TimeoutException, httpx.NetworkError) as exc:
                         retries += 1
+                        if proxy:
+                            await proxy_manager.block_proxy(
+                                proxy.identifier, 60
+                            )
                         logger.bind(
+                            error_message=exc,
                             retries=retries,
                             max_retries=max_retries,
-                            error=str(exc),
                         ).warning("Network error, retrying")
                         if retries >= max_retries:
                             raise
@@ -197,10 +220,11 @@ async def fetch_all_instagram_reels(
         ).info("Completed fetching all Instagram reels")
     except Exception as exc:
         logger.bind(
+            error_message=exc,
             profile_link=profile_link,
             total_reels=len(all_reels),
-            error=str(exc),
-        ).error(
+        ).exception(
             "Exception occurred while fetching reels, returning collected reels"
         )
-    return all_reels
+    finally:
+        return all_reels
