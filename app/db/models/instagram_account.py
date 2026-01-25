@@ -13,9 +13,10 @@ class InstagramAccount(IDMixin, TimestampMixin, Base):
     login: Mapped[str] = mapped_column(nullable=False, unique=True)
     password: Mapped[str] = mapped_column(nullable=False)
     last_used_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        DateTime(timezone=True), nullable=True
     )
     cookies: Mapped[dict] = mapped_column(JSONB, nullable=True)
+    valid: Mapped[bool] = mapped_column()
 
     def __repr__(self) -> str:
         return f"CardVariant(id={self.id}, login={self.login})"

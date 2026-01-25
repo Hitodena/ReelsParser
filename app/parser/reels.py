@@ -55,7 +55,7 @@ async def fetch_instagram_reels(
         profile_link=profile_link,
         url=url,
         execution_time=f"{elapsed_time:.2f}",
-    ).success("Fetched Instagram reels successfully")
+    ).info("Fetched Instagram reels successfully")
     return response.json()
 
 
@@ -95,7 +95,7 @@ def parse_instagram_data(data: dict, profile_link: str) -> list[dict]:
             }
         )
 
-    logger.bind(profile_link=profile_link, count=len(reels)).success(
+    logger.bind(profile_link=profile_link, count=len(reels)).info(
         "Parsed reels"
     )
     return reels
@@ -194,7 +194,7 @@ async def fetch_all_instagram_reels(
 
         logger.bind(
             profile_link=profile_link, total_reels=len(all_reels)
-        ).success("Completed fetching all Instagram reels")
+        ).info("Completed fetching all Instagram reels")
     except Exception as exc:
         logger.bind(
             profile_link=profile_link,

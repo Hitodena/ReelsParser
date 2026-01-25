@@ -22,7 +22,7 @@ class BaseDAO(Generic[T]):
             logger.bind(
                 instance=new_instance,
                 model=cls.model,
-            ).success("Instance added successfully")
+            ).info("Instance added successfully")
             return new_instance
         except Exception as exc:
             logger.bind(
@@ -43,7 +43,7 @@ class BaseDAO(Generic[T]):
                     "Instance not found by pk"
                 )
                 return None
-            logger.bind(pk=pk, model=cls.model).success(
+            logger.bind(pk=pk, model=cls.model).info(
                 "Instance found successfully by pk"
             )
             return instance

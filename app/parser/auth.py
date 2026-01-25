@@ -329,7 +329,7 @@ async def login_to_instagram(
         if not cookies_dict.get("sessionid"):
             raise AuthCredentialsError("No sessionid in cookies")
 
-        logger.bind(login=auth.login).success("Successfully logged in")
+        logger.bind(login=auth.login).info("Successfully logged in")
         return cookies_dict
 
     except AuthCredentialsError:

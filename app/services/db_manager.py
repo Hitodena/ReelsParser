@@ -27,8 +27,9 @@ class DatabaseSessionManager:
         self._sessionmaker = async_sessionmaker(
             bind=self._engine,
             expire_on_commit=False,
+            autoflush=False,
         )
-        logger.bind(url=self.url).success("Successfully connected to DB")
+        logger.bind(url=self.url).info("Successfully connected to DB")
 
     async def close(self) -> None:
         logger.bind(url=self.url).info("Closing DB connection...")
@@ -38,7 +39,7 @@ class DatabaseSessionManager:
         await self._engine.dispose()
         self._engine = None
         self._sessionmaker = None
-        logger.bind(url=self.url).success(
+        logger.bind(url=self.url).info(
             "DB connection was successfully closed"
         )
 
@@ -53,13 +54,15 @@ class DatabaseSessionManager:
                 logger.info("Yielding session")
                 yield session
                 elapsed_time = time.perf_counter() - start_time
-                logger.bind(execution_time=f"{elapsed_time:.2f}").success(
+                logger.bind(execution_time=f"{elapsed_time:.2f}").info(
                     "Session yielded successfully"
                 )
             except Exception:
                 logger.exception("Failed to yield session")
                 await session.rollback()
                 raise
+            finally:
+                await session.close()
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
@@ -72,10 +75,12 @@ class DatabaseSessionManager:
                 logger.info("Yielding connection")
                 yield connection
                 elapsed_time = time.perf_counter() - start_time
-                logger.bind(execution_time=f"{elapsed_time:.2f}").success(
+                logger.bind(execution_time=f"{elapsed_time:.2f}").info(
                     "Connection yielded successfully"
                 )
             except Exception:
                 logger.exception("Failed to yield connection")
                 await connection.rollback()
                 raise
+            finally:
+                await connection.close()

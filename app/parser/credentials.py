@@ -105,7 +105,7 @@ async def extract_credentials(
                 f"Failed to capture GraphQL request for {auth.login}"
             )
 
-        logger.bind(login=auth.login).success("Credentials extracted")
+        logger.bind(login=auth.login).info("Credentials extracted")
         return captured_data
 
     except Exception as e:

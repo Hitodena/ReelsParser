@@ -52,7 +52,7 @@ class BrowserManager:
             headless=self.headless, args=launch_args
         )
 
-        logger.success("Playwright browser started")
+        logger.info("Playwright browser started")
 
     async def close(self) -> None:
         """Closes the Playwright browser instance."""
@@ -68,7 +68,7 @@ class BrowserManager:
         self._browser = None
         self._playwright = None
 
-        logger.success("Playwright browser closed")
+        logger.info("Playwright browser closed")
 
     @asynccontextmanager
     async def context(

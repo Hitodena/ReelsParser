@@ -18,7 +18,11 @@ class InstagramDAO(BaseDAO):
         logger.bind(model=cls.model, login=login).info(
             "Getting instagram account by login"
         )
-        stmt = select(cls.model).where(cls.model.login == login)
+        stmt = (
+            select(cls.model)
+            .where(cls.model.login == login, cls.model.valid)
+            .order_by(cls.model.last_used_at.asc().nullsfirst())
+        )
         try:
             result = await session.execute(stmt)
             account = result.scalar_one_or_none()
@@ -27,7 +31,7 @@ class InstagramDAO(BaseDAO):
                     "No account found by login"
                 )
                 return None
-            logger.bind(model=cls.model, login=login).success(
+            logger.bind(model=cls.model, login=login).info(
                 "Found instagram account by login"
             )
             return account
@@ -43,6 +47,7 @@ class InstagramDAO(BaseDAO):
         password: str | None = None,
         last_updated_at: datetime | None = None,
         cookies: dict | None = None,
+        valid: bool | None = None,
     ) -> InstagramAccount | None:
         logger.bind(model=cls.model, login=login).info(
             "Updating instagram account by login"
@@ -54,6 +59,8 @@ class InstagramDAO(BaseDAO):
             update_data["last_updated_at"] = last_updated_at
         if cookies:
             update_data["cookies"] = cookies
+        if valid:
+            update_data["valid"] = valid
         elif not update_data:
             logger.bind(model=cls.model, login=login).warning(
                 "No fields to update"
