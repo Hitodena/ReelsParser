@@ -27,6 +27,9 @@ class EnvironmentSettings(BaseSettings):
 
     redis_url: str = Field(default="redis://localhost:6379")
 
+    api_base_url: str = Field(default="localhost")
+    bot_token: str = Field(default="")
+
     cors_allow_origins: Sequence[str] = Field(default=["*"])
     cors_allow_credentials: bool = Field(default=True)
 
