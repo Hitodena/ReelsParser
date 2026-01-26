@@ -26,7 +26,7 @@ class ProxyManager:
         self.proxy_block_key = f"{self.proxy_key}blocked:"
         logger.info("ProxyManager initialized")
 
-    async def add_proxy(self, proxy: ProxyModel) -> ProxyModel | None:
+    async def add_proxy(self, proxy: ProxyModel) -> str:
         """Add a new proxy after validating it.
 
         Args:
@@ -41,7 +41,7 @@ class ProxyManager:
             logger.bind(proxy_id=proxy.identifier).warning(
                 "Proxy validation failed, not adding"
             )
-            return None
+            return proxy.identifier
 
         key = f"{self.proxy_key}{proxy.identifier}"
 
@@ -50,7 +50,7 @@ class ProxyManager:
         await self.redis.zadd(self.proxy_sorted_key, {proxy.identifier: 0})
 
         logger.bind(proxy_id=proxy.identifier).info("Proxy added successfully")
-        return proxy
+        return proxy.identifier
 
     async def get_proxy(self, proxy_id: str) -> ProxyModel | None:
         """Retrieve a proxy by its identifier.

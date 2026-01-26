@@ -100,3 +100,14 @@ class ProxyUnblockResponseSchema(BaseModel):
                 "status": "success",
             }
         }
+
+
+class ProxyBlockResponseSchema(BaseModel):
+    status: str = Field(description="Operation status")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "success",
+            }
+        }

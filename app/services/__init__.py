@@ -9,5 +9,5 @@ __all__ = [
     "DatabaseSessionManager",
     "ProxyManager",
     "RedisManager",
-    "InstagramOrchestrator"
+    "InstagramOrchestrator",
 ]

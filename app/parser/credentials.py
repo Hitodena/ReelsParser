@@ -92,7 +92,7 @@ async def extract_credentials(
         await page.goto(
             f"{cfg.parsing.instagram_url}{target_username}{cfg.parsing.instagram_reels_url}/"
         )
-        await page.wait_for_timeout(cfg.timeouts.connection_timeout * 1000)
+        await page.wait_for_load_state("domcontentloaded")
 
         # Update cookies (they may have been refreshed)
         fresh_cookies = await ctx.cookies()

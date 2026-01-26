@@ -1,7 +1,10 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from app.db.dao import InstagramAccountDAO
+from app.exceptions.instagram_exceptions import AuthUnexpectedError
 from app.models import InstagramAuth
 from app.services import (
     BrowserManager,
@@ -24,7 +27,7 @@ parsing_router = APIRouter(prefix="/instagram", tags=["Instagram"])
         "Parse Reels from a target Instagram profile and return an XLSX file. "
         "Uses stored account credentials to authenticate and fetch data."
     ),
-    response_model=StreamingResponse,
+    response_model=None,
     responses={
         200: {
             "description": "XLSX file with parsed reels",
@@ -75,53 +78,61 @@ async def parse_reels_xlsx(
     import io
 
     import pandas as pd
-    from fastapi.responses import StreamingResponse
 
     async with db.session() as session:
         account = await InstagramAccountDAO.get_least_used(session)
 
-        if not account:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No valid Instagram accounts available. Please add an account first.",
-            )
-
-        auth = InstagramAuth(
-            login=account.login,
-            password=account.password,
-            cookies=account.cookies,
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No valid Instagram accounts available. Please add an account first.",
         )
 
-        proxy_formatted = None
-        proxy = await proxy_manager.get_least_used()
-        if proxy:
-            proxy_formatted = proxy.to_playwright_proxy()
-
-        try:
-            async with browser.context(proxy=proxy_formatted) as (page, ctx):
-                credentials = await orchestrator.login_and_extract_credentials(
-                    page, ctx, auth, data.target_username
-                )
-        except Exception as exc:
-            async with db.session() as session:
-                await InstagramAccountDAO.update_by_login(
-                    session, auth.login, valid=False
-                )
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to use account '{account.login}'. Account has been invalidated: {exc}.",
-            )
-
-    credentials = {
-        "cookies": account.cookies,
-    }
-
-    reels = await orchestrator.parse_profile_reels(
-        credentials=credentials,
-        target_username=data.target_username,
-        max_reels=data.max_reels,
+    auth = InstagramAuth(
+        login=account.login,
+        password=account.password,
+        cookies=account.cookies,
     )
 
+    proxy_formatted = None
+    proxy = await proxy_manager.get_least_used()
+    if proxy:
+        proxy_formatted = proxy.to_playwright_proxy()
+
+    try:
+        async with browser.context(proxy=proxy_formatted) as (page, ctx):
+            reels, credentials = await orchestrator.full_workflow(
+                page, ctx, auth, data.target_username, data.max_reels
+            )
+    except AuthUnexpectedError as exc:
+        async with db.session() as session:
+            await InstagramAccountDAO.update_by_login(
+                session, auth.login, valid=False
+            )
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to use account '{account.login}' with unexpected error, account has been invalidated: {exc}.",
+        )
+    except Exception as exc:
+        async with db.session() as session:
+            await InstagramAccountDAO.update_by_login(
+                session, auth.login, valid=False
+            )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to use account '{account.login}'. Account has been invalidated: {exc}.",
+        )
+
+    # Update cookies and last_used_at in DB
+    async with db.session() as session:
+        await InstagramAccountDAO.update_by_login(
+            session,
+            auth.login,
+            cookies=credentials.get("cookies"),
+            last_used_at=datetime.now(),
+        )
+
+    reels = [r for r in reels if isinstance(r, dict)]
     df = pd.DataFrame(reels)
 
     output = io.BytesIO()

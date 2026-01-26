@@ -1,6 +1,6 @@
 from .config import Config, load
 from .env import EnvironmentSettings
-from .settings import Dentifiers, Logs, Network, Retries, Timeouts
+from .settings import Identifiers, Logs, Network, Retries, Timeouts
 
 __all__ = [
     "Config",
@@ -10,5 +10,5 @@ __all__ = [
     "Timeouts",
     "Retries",
     "Network",
-    "Dentifiers",
+    "Identifiers",
 ]

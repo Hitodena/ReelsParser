@@ -1,11 +1,10 @@
-import asyncio
-import sys
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import api_router
 from app.core import load
 from app.services import (
     BrowserManager,
@@ -15,22 +14,7 @@ from app.services import (
     RedisManager,
 )
 
-# Test for windows
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-
 config = load()
-
-app = FastAPI(title="Instagram Reels Parser")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=config.environment.cors_allow_origins,
-    allow_credentials=config.environment.cors_allow_credentials,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 @asynccontextmanager
@@ -59,12 +43,25 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    await app.state.browser.close()
     await app.state.redis.close()
     await app.state.db.close()
+    await app.state.browser.close()
 
 
-@app.get("/api/", tags=["root"])
+app = FastAPI(title="Instagram Reels Parser", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.environment.cors_allow_origins,
+    allow_credentials=config.environment.cors_allow_credentials,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router)
+
+
+@app.get("/", tags=["root"])
 async def root():
     return {
         "message": "Instagram Reels Parser",
@@ -83,6 +80,6 @@ if __name__ == "__main__":
         "app.main:app",
         host="localhost",
         port=8000,
-        reload=config.environment.debug,
+        reload=False,
         log_level=config.environment.log_level.lower(),
     )

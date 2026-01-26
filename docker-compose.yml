@@ -17,6 +17,30 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+    networks:
+      - inst_parser_network
+  redis:
+    image: redis:8
+    container_name: inst_parser_redis
+    restart: unless-stopped
+    command:
+      ["redis-server", "--maxmemory 200mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/var/lib/redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - inst_parser_network
 
 volumes:
   pgdata:
+  redisdata:
+
+networks:
+  inst_parser_network:
+    driver: bridge

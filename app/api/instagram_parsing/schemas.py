@@ -15,7 +15,7 @@ class ParseReelsSchema(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "target_username_link": "https://www.instagram.com/iamrigbycat",
+                "target_username": "iamrigbycat",
                 "max_reels": 100,
             }
         }

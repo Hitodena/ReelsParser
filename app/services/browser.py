@@ -63,13 +63,29 @@ class BrowserManager:
 
         logger.info("Closing Playwright browser...")
 
-        await self._browser.close()
-        await self._playwright.stop()
+        try:
+            if self._browser and self._browser.is_connected():
+                contexts = self._browser.contexts
+                for context in contexts:
+                    try:
+                        await context.close()
+                    except Exception as e:
+                        logger.warning(f"Error closing context: {e}")
 
-        self._browser = None
-        self._playwright = None
+                await self._browser.close()
+        except Exception as e:
+            logger.warning(f"Error closing browser: {e}")
 
-        logger.info("Playwright browser closed")
+        try:
+            if self._playwright:
+                await self._playwright.stop()
+        except Exception as e:
+            logger.warning(f"Error stopping playwright: {e}")
+        finally:
+            self._browser = None
+            self._playwright = None
+
+        logger.info("Playwright browser cleanup completed")
 
     @asynccontextmanager
     async def context(

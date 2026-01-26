@@ -8,6 +8,7 @@ from ..deps import get_proxy_manager
 from .schemas import (
     ProxyAddResponseSchema,
     ProxyAddSchema,
+    ProxyBlockResponseSchema,
     ProxyDeleteResponseSchema,
     ProxyListSchema,
     ProxyResponseSchema,
@@ -52,7 +53,7 @@ async def add_proxy(
 
         proxy_id = await proxy_manager.add_proxy(proxy)
 
-        return ProxyAddResponseSchema(status="success", proxy_id=str(proxy_id))
+        return ProxyAddResponseSchema(status="success", proxy_id=proxy_id)
     except Exception as exc:
         raise HTTPException(500, f"Failed to add proxy: {exc}")
 
@@ -126,7 +127,7 @@ async def delete_proxy(
         raise HTTPException(404, f"Proxy not found: {exc}")
 
 
-@router.post(
+@proxy_router.post(
     "/{proxy_id}/unblock",
     summary="Manually unblock a specific proxy",
     response_model=ProxyUnblockResponseSchema,
@@ -154,5 +155,35 @@ async def unblock_proxy(
     try:
         await proxy_manager.unblock_proxy(proxy_id)
         return ProxyUnblockResponseSchema(status="success")
+    except Exception as exc:
+        raise HTTPException(404, f"Proxy not found: {exc}")
+
+
+@proxy_router.post(
+    "/{proxy_id}/block",
+    summary="Manually block a specific proxy",
+    response_model=ProxyBlockResponseSchema,
+    responses={
+        200: {"description": "Proxy blocked successfully"},
+        404: {"description": "Not Found - Proxy not found"},
+        500: {"description": "Internal Server Error - Failed to block proxy"},
+    },
+    status_code=status.HTTP_200_OK,
+)
+async def block_proxy(
+    proxy_id: str, proxy_manager: ProxyManager = Depends(get_proxy_manager)
+) -> ProxyBlockResponseSchema:
+    """Manually block a specific proxy.
+
+    Args:
+        proxy_id: The unique identifier of the proxy to block.
+        proxy_manager: The proxy manager service instance.
+
+    Returns:
+        ProxyBlockResponseSchema: Response containing the status of the block operation.
+    """
+    try:
+        await proxy_manager.block_proxy(proxy_id)
+        return ProxyBlockResponseSchema(status="success")
     except Exception as exc:
         raise HTTPException(404, f"Proxy not found: {exc}")

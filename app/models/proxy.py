@@ -19,7 +19,7 @@ class ProxyModel(BaseModel):
     @computed_field
     @property
     def identifier(self) -> str:
-        return f"{self.host}{self.port}"
+        return f"{self.host}:{self.port}"
 
     def to_playwright_proxy(self) -> dict:
         proxy = {"server": f"{self.protocol}://{self.host}:{self.port}"}

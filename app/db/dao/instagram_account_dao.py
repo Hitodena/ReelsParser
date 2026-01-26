@@ -47,7 +47,7 @@ class InstagramAccountDAO(BaseDAO):
         session: AsyncSession,
         login: str,
         password: str | None = None,
-        last_updated_at: datetime | None = None,
+        last_used_at: datetime | None = None,
         cookies: dict | None = None,
         valid: bool | None = None,
     ) -> InstagramAccount | None:
@@ -57,8 +57,8 @@ class InstagramAccountDAO(BaseDAO):
         update_data = {}
         if password:
             update_data["password"] = password
-        if last_updated_at:
-            update_data["last_updated_at"] = last_updated_at
+        if last_used_at:
+            update_data["last_used_at"] = last_used_at
         if cookies:
             update_data["cookies"] = cookies
         if valid:
@@ -80,7 +80,7 @@ class InstagramAccountDAO(BaseDAO):
             await session.commit()
             account = result.scalar_one_or_none()
             if not account:
-                logger.bind(model=cls.model, login=login).error(
+                logger.bind(model=cls.model, login=login).warning(
                     "No account updated by login"
                 )
                 return None
@@ -89,6 +89,38 @@ class InstagramAccountDAO(BaseDAO):
             logger.bind(
                 error_message=exc, model=cls.model, login=login
             ).exception("Failed to update account by login")
+            raise
+
+    @classmethod
+    async def update_validity(
+        cls, session: AsyncSession, login: str, valid: bool
+    ) -> InstagramAccount | None:
+        logger.bind(model=cls.model, login=login, valid=valid).info(
+            "Updating validity of instagram account"
+        )
+        stmt = (
+            update(cls.model)
+            .where(cls.model.login == login)
+            .values(valid=valid)
+        ).returning(cls.model)
+
+        try:
+            result = await session.execute(stmt)
+            await session.commit()
+            account = result.scalar_one_or_none()
+            if not account:
+                logger.bind(model=cls.model, login=login).warning(
+                    "No account found to update validity"
+                )
+                return None
+            logger.bind(model=cls.model, login=login).info(
+                "Updated validity of instagram account"
+            )
+            return account
+        except Exception as exc:
+            logger.bind(
+                error_message=exc, model=cls.model, login=login
+            ).exception("Failed to update validity of account")
             raise
 
     @classmethod

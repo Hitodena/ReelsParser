@@ -8,3 +8,5 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(account_router)
 api_router.include_router(parsing_router)
 api_router.include_router(proxy_router)
+
+__all__ = ["api_router"]

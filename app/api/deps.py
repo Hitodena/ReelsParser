@@ -15,7 +15,7 @@ def get_db(request: Request) -> DatabaseSessionManager:
 
 def get_orchestrator(request: Request) -> InstagramOrchestrator:
     """Get Instagram orchestrator from app state"""
-    return request.app.state.orchestrator
+    return request.app.state.parser_orchestrator
 
 
 def get_browser(request: Request) -> BrowserManager:

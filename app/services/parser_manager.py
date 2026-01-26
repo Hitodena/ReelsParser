@@ -35,6 +35,10 @@ class InstagramOrchestrator:
             page (Page): Playwright page instance
             ctx (BrowserContext): Browser context
             auth (InstagramAuth): Authentication credentials
+
+        Raises:
+            AuthCredentialsError: If login fails due to invalid credentials
+            AuthUnexpectedError: For unexpected errors
         """
         try:
             logger.bind(login=auth.login).info("Starting login")
@@ -186,7 +190,7 @@ class InstagramOrchestrator:
         auth: InstagramAuth,
         target_username: str,
         max_reels: int | None = None,
-    ) -> tuple[dict, list[dict]]:
+    ) -> tuple[list[dict], dict]:
         """
         Complete workflow: login → extract credentials → parse reels.
 
@@ -200,7 +204,7 @@ class InstagramOrchestrator:
             max_reels: Maximum reels to fetch
 
         Returns:
-            tuple: (credentials, reels)
+            tuple: (reels, credentials)
         """
         # Step 1: Login and extract credentials
         credentials = await self.login_and_extract_credentials(
@@ -214,4 +218,4 @@ class InstagramOrchestrator:
             max_reels=max_reels,
         )
 
-        return credentials, reels
+        return reels, credentials

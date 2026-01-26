@@ -1,25 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.db.dao import InstagramAccountDAO
+from app.exceptions import AuthCredentialsError, AuthUnexpectedError
 from app.services import (
     BrowserManager,
     DatabaseSessionManager,
     InstagramOrchestrator,
+    ProxyManager,
 )
 
-from ..deps import get_browser, get_db, get_orchestrator
+from ..deps import get_browser, get_db, get_orchestrator, get_proxy_manager
 from .schemas import (
     AddAccountSchema,
     DeleteAccountResponse,
     ListAccountSchema,
     ResponseAccountSchema,
+    UpdateValiditySchema,
 )
 
 account_router = APIRouter(prefix="/accounts", tags=["Instagram Accounts"])
 
 
 @account_router.get(
-    "/list",
+    "",
     response_model=ListAccountSchema,
     status_code=status.HTTP_200_OK,
     summary="List all Instagram accounts",
@@ -27,6 +30,7 @@ account_router = APIRouter(prefix="/accounts", tags=["Instagram Accounts"])
     responses={
         200: {"description": "Accounts retrieved"},
         500: {"description": "Internal Server Error"},
+        404: {"description": "There is no accounts"},
     },
 )
 async def list_accounts(db: DatabaseSessionManager = Depends(get_db)):
@@ -41,16 +45,15 @@ async def list_accounts(db: DatabaseSessionManager = Depends(get_db)):
     """
     async with db.session() as session:
         accounts = await InstagramAccountDAO.get_all(session)
-        if accounts is None:
-            accounts = []
 
-        account_summaries = [
-            AddAccountSchema.model_validate(acc) for acc in accounts
-        ]
+    if accounts is None:
+        raise HTTPException(404, "There is no accounts")
 
-        return ListAccountSchema(
-            total=len(accounts), accounts=account_summaries
-        )
+    account_summaries = [
+        AddAccountSchema.model_validate(acc) for acc in accounts
+    ]
+
+    return ListAccountSchema(total=len(accounts), accounts=account_summaries)
 
 
 @account_router.get(
@@ -84,13 +87,13 @@ async def get_account(
     async with db.session() as session:
         account = await InstagramAccountDAO.get_by_login(session, login)
 
-        if not account:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Account not found",
-            )
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Account not found",
+        )
 
-        return ResponseAccountSchema.model_validate(account)
+    return ResponseAccountSchema.model_validate(account)
 
 
 @account_router.delete(
@@ -123,13 +126,64 @@ async def delete_account(
     try:
         async with db.session() as session:
             account = await InstagramAccountDAO.delete_by_login(session, login)
-            if not account:
-                raise HTTPException(404, "Account not found")
+        if not account:
+            raise HTTPException(404, "Account not found")
         return DeleteAccountResponse(status="success")
     except HTTPException:
         raise
     except Exception as exc:
         raise HTTPException(500, f"Failed to delete account: {exc}")
+
+
+@account_router.patch(
+    "/{login}/validity",
+    response_model=ResponseAccountSchema,
+    status_code=status.HTTP_200_OK,
+    summary="Update Instagram account validity",
+    description="Update the validity status of a specific Instagram account by login.",
+    responses={
+        200: {"description": "Account validity updated successfully"},
+        404: {"description": "Not Found - Account not found"},
+        500: {"description": "Internal Server Error"},
+    },
+)
+async def update_account_validity(
+    login: str,
+    data: UpdateValiditySchema,
+    db: DatabaseSessionManager = Depends(get_db),
+) -> ResponseAccountSchema:
+    """
+    Updates the validity status of a specific Instagram account by login.
+
+    Args:
+        login (str): The login of the Instagram account.
+        data (UpdateValiditySchema): The validity data to update.
+        db: Database session dependency.
+
+    Returns:
+        ResponseAccountSchema: Updated account information.
+
+    Raises:
+        HTTPException: If the account is not found.
+    """
+    try:
+        async with db.session() as session:
+            account = await InstagramAccountDAO.update_validity(
+                session, login, data.valid
+            )
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Account not found",
+            )
+        return ResponseAccountSchema.model_validate(account)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update account validity: {exc}",
+        )
 
 
 @account_router.post(
@@ -156,6 +210,7 @@ async def add_account(
     db: DatabaseSessionManager = Depends(get_db),
     orchestrator: InstagramOrchestrator = Depends(get_orchestrator),
     browser: BrowserManager = Depends(get_browser),
+    proxy_manager: ProxyManager = Depends(get_proxy_manager),
 ):
     """
     Add new Instagram account.
@@ -182,15 +237,19 @@ async def add_account(
             existing = await InstagramAccountDAO.get_by_login(
                 session, data.login
             )
-            if existing:
-                raise HTTPException(400, "Account already exists")
+        if existing:
+            raise HTTPException(400, "Account already exists")
+
+        proxy_formatted = None
+        proxy = await proxy_manager.get_least_used()
+        if proxy:
+            proxy_formatted = proxy.to_playwright_proxy()
 
         # Get browser context
-        async with browser.context() as (page, ctx):
+        async with browser.context(proxy=proxy_formatted) as (page, ctx):
             # Logging in and extracting
             cookies = await orchestrator.check_account_login(page, ctx, data)
 
-        # Save into DB
         async with db.session() as session:
             # Create DB Account
             account = await InstagramAccountDAO.add(
@@ -202,11 +261,15 @@ async def add_account(
             )
 
         return ResponseAccountSchema.model_validate(account)
-
     except HTTPException:
         raise
-    except Exception as exc:
+    except AuthCredentialsError as exc:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add account: {exc}",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add '{data.login}' with auth credentials: {exc}",
+        )
+    except AuthUnexpectedError as exc:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to add '{data.login}' with unexpected error: {exc}",
         )

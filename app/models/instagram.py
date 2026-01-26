@@ -1,11 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, Field
 
 
 class InstagramAuth(BaseModel):
-    model_config = ConfigDict(from_attributes=True, extra="ignore")
-
     login: str = Field(description="Login to Instagram", min_length=2)
     password: str = Field(description="Password to Instagram", min_length=2)
     cookies: dict | None = Field(
@@ -18,6 +16,8 @@ class InstagramAuth(BaseModel):
     valid: bool = Field(default=True, description="Is account valid or not")
 
     class Config:
+        from_attributes = True
+        extra = "ignore"
         json_schema_extra = {
             "example": {
                 "login": "username",

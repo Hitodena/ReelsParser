@@ -31,6 +31,10 @@ class ListAccountSchema(BaseModel):
         }
 
 
+class UpdateValiditySchema(BaseModel):
+    valid: bool = Field(description="Validity status of the account")
+
+
 class DeleteAccountResponse(BaseModel):
     status: str = Field(description="Operation status")
 
