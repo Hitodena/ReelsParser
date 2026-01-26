@@ -13,6 +13,7 @@ async def extract_credentials(
     ctx: BrowserContext,
     auth: InstagramAuth,
     cfg: Config,
+    target_username: str,
 ) -> dict:
     """
     Extract GraphQL credentials by intercepting Instagram API requests.
@@ -89,7 +90,7 @@ async def extract_credentials(
         # Navigate to reels page to trigger GraphQL requests
         logger.bind(login=auth.login).info("Extracting credentials")
         await page.goto(
-            f"{cfg.parsing.instagram_url}{auth.login}{cfg.parsing.instagram_reels_url}/"
+            f"{cfg.parsing.instagram_url}{target_username}{cfg.parsing.instagram_reels_url}/"
         )
         await page.wait_for_timeout(cfg.timeouts.connection_timeout * 1000)
 

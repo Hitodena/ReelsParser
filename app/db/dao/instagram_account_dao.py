@@ -1,14 +1,14 @@
 from datetime import datetime
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import InstagramAccount
 from .base_dao import BaseDAO
 
 
-class InstagramDAO(BaseDAO):
+class InstagramAccountDAO(BaseDAO):
     model = InstagramAccount
 
     @classmethod
@@ -36,7 +36,9 @@ class InstagramDAO(BaseDAO):
             )
             return account
         except Exception as exc:
-            logger.bind(error_message=exc, model=cls.model, login=login)
+            logger.bind(
+                error_message=exc, model=cls.model, login=login
+            ).exception("Failed to get account by login")
             raise
 
     @classmethod
@@ -87,4 +89,71 @@ class InstagramDAO(BaseDAO):
             logger.bind(
                 error_message=exc, model=cls.model, login=login
             ).exception("Failed to update account by login")
+            raise
+
+    @classmethod
+    async def delete_by_login(
+        cls, session: AsyncSession, login: str
+    ) -> InstagramAccount | None:
+        logger.bind(model=cls.model, login=login).info(
+            "Getting instagram account by login"
+        )
+        stmt = (
+            delete(cls.model)
+            .where(cls.model.login == login, cls.model.valid)
+            .returning(cls.model)
+        )
+        try:
+            result = await session.execute(stmt)
+            account = result.scalar_one_or_none()
+            if not account:
+                logger.bind(model=cls.model, login=login).warning(
+                    "No account found by login"
+                )
+                return None
+            logger.bind(model=cls.model, login=login).info(
+                "Deleted instagram account by login"
+            )
+            return account
+        except Exception as exc:
+            logger.bind(error_message=exc, model=cls.model, login=login).info(
+                "Failed to delete account by login"
+            )
+            raise
+
+    @classmethod
+    async def get_least_used(
+        cls, session: AsyncSession
+    ) -> InstagramAccount | None:
+        logger.bind(model=cls.model).info(
+            "Getting least recently used Instagram account"
+        )
+
+        stmt = (
+            select(cls.model)
+            .where(cls.model.valid)
+            .order_by(cls.model.last_used_at.asc().nullsfirst())
+            .limit(1)
+        )
+
+        try:
+            result = await session.execute(stmt)
+            account = result.scalar_one_or_none()
+
+            if not account:
+                logger.bind(model=cls.model).warning("No valid accounts found")
+                return None
+
+            logger.bind(
+                model=cls.model,
+                login=account.login,
+                last_used_at=account.last_used_at,
+            ).info("Found least recently used account")
+
+            return account
+
+        except Exception as exc:
+            logger.bind(error_message=exc, model=cls.model).exception(
+                "Failed to get least recently used account"
+            )
             raise

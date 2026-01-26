@@ -1,6 +1,7 @@
 from typing import Any, Generic, Type, TypeVar
 
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.base import Base
@@ -74,4 +75,28 @@ class BaseDAO(Generic[T]):
                 "Failed to delete instance by pk"
             )
             await session.rollback()
+            raise
+
+    @classmethod
+    async def get_all(cls, session: AsyncSession, **kwargs) -> list[T] | None:
+        logger.bind(model=cls.model, kwargs=kwargs).info(
+            "Getting all instances"
+        )
+        stmt = select(cls.model).filter_by(**kwargs)
+        try:
+            result = await session.execute(stmt)
+            instances = result.scalars().all()
+            if not instances:
+                logger.bind(kwargs=kwargs, model=cls.model).warning(
+                    "No instances found"
+                )
+                return None
+            logger.bind(
+                kwargs=kwargs, model=cls.model, instances_count=len(instances)
+            ).info("Instances found successfully")
+            return list(instances)
+        except Exception as exc:
+            logger.bind(
+                error_message=exc, kwargs=kwargs, model=cls.model
+            ).exception("Failed to get all instances")
             raise

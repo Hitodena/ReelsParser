@@ -21,6 +21,10 @@ class Retries(BaseModel):
     max_retries: int = Field(
         default=3, description="Maximum number of retries for fetching reels"
     )
+    retry_delay: float = Field(
+        default=5,
+        description="Delay between retries for proxy validation (in seconds)",
+    )
 
 
 class Timeouts(BaseModel):
@@ -82,6 +86,10 @@ class Parsing(BaseModel):
     instagram_url: str = Field(
         default="https://www.instagram.com/",
         description="URL to check if login after cookies/auth",
+    )
+    proxy_validation_url: str = Field(
+        default="https://www.instagram.com/",
+        description="URL used for proxy validation",
     )
 
 

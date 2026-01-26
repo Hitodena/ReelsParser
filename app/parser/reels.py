@@ -14,7 +14,7 @@ async def fetch_instagram_reels(
     data: dict,
     client: httpx.AsyncClient,
     config: Config,
-    profile_link: str,
+    target_username: str,
 ) -> dict:
     """
     Fetches Instagram Reels data using the provided credentials and parameters.
@@ -43,7 +43,7 @@ async def fetch_instagram_reels(
         form_data["variables"] = json.dumps(form_data["variables"])
 
     start_time = time.perf_counter()
-    logger.bind(profile_link=profile_link, url=url).info(
+    logger.bind(target_username=target_username, url=url).info(
         "Fetching Instagram reels"
     )
     response = await client.post(
@@ -56,14 +56,14 @@ async def fetch_instagram_reels(
     elapsed_time = time.perf_counter() - start_time
     response.raise_for_status()
     logger.bind(
-        profile_link=profile_link,
+        target_username=target_username,
         url=url,
         execution_time=f"{elapsed_time:.2f}",
     ).info("Fetched Instagram reels successfully")
     return response.json()
 
 
-def parse_instagram_data(data: dict, profile_link: str) -> list[dict]:
+def parse_instagram_data(data: dict, target_username: str) -> list[dict]:
     """
     Parses Instagram GraphQL response and extracts Reels data.
 
@@ -76,7 +76,7 @@ def parse_instagram_data(data: dict, profile_link: str) -> list[dict]:
     """
     reels: list = []
     edges = data["data"]["xdt_api__v1__clips__user__connection_v2"]["edges"]
-    logger.bind(profile_link=profile_link, edges_count=len(edges)).info(
+    logger.bind(target_username=target_username, edges_count=len(edges)).info(
         "Parsing Instagram data"
     )
 
@@ -99,7 +99,7 @@ def parse_instagram_data(data: dict, profile_link: str) -> list[dict]:
             }
         )
 
-    logger.bind(profile_link=profile_link, count=len(reels)).info(
+    logger.bind(target_username=target_username, count=len(reels)).info(
         "Parsed reels"
     )
     return reels
@@ -109,7 +109,7 @@ async def fetch_all_instagram_reels(
     credentials: dict,
     config: Config,
     max_reels: int | None,
-    profile_link: str,
+    target_username: str,
     proxy_manager: ProxyManager,
 ) -> list[dict]:
     """
@@ -126,7 +126,9 @@ async def fetch_all_instagram_reels(
     """
     max_retries = config.retries.max_retries
     logger.bind(
-        profile_link=profile_link, max_reels=max_reels, max_retries=max_retries
+        target_username=target_username,
+        max_reels=max_reels,
+        max_retries=max_retries,
     ).info("Starting to fetch all Instagram reels")
     all_reels = []
     has_next = True
@@ -151,10 +153,10 @@ async def fetch_all_instagram_reels(
                             data["variables"]["after"] = cursor
 
                         response = await fetch_instagram_reels(
-                            data, client, config, profile_link
+                            data, client, config, target_username
                         )
 
-                        reels = parse_instagram_data(response, profile_link)
+                        reels = parse_instagram_data(response, target_username)
                         all_reels.extend(reels)
 
                         page_info = response["data"][
@@ -216,12 +218,12 @@ async def fetch_all_instagram_reels(
                         )
 
         logger.bind(
-            profile_link=profile_link, total_reels=len(all_reels)
+            target_username=target_username, total_reels=len(all_reels)
         ).info("Completed fetching all Instagram reels")
     except Exception as exc:
         logger.bind(
             error_message=exc,
-            profile_link=profile_link,
+            target_username=target_username,
             total_reels=len(all_reels),
         ).exception(
             "Exception occurred while fetching reels, returning collected reels"

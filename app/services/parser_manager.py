@@ -26,8 +26,48 @@ class InstagramOrchestrator:
         self.config = config
         self.proxy_manager = proxy_manager
 
-    async def login_and_extract_credentials(
+    async def check_account_login(
         self, page: Page, ctx: BrowserContext, auth: InstagramAuth
+    ) -> dict:
+        """Get cookies to DB model account
+
+        Args:
+            page (Page): Playwright page instance
+            ctx (BrowserContext): Browser context
+            auth (InstagramAuth): Authentication credentials
+        """
+        try:
+            logger.bind(login=auth.login).info("Starting login")
+            cookies = await login_to_instagram(page, ctx, auth, self.config)
+            logger.bind(login=auth.login).info(
+                "Successfully logged and returned cookies"
+            )
+
+            return cookies
+        except AuthCredentialsError as exc:
+            logger.bind(error_message=exc, login=auth.login).error(
+                "Invalid credentials"
+            )
+            raise
+        except AuthUnexpectedError as exc:
+            logger.bind(error_message=exc, login=auth.login).error(
+                "Unexpected error during extraction"
+            )
+            raise
+        except Exception as exc:
+            logger.bind(error_message=exc, login=auth.login).exception(
+                "Failed to extract credentials"
+            )
+            raise AuthUnexpectedError(
+                f"Credential extraction failed for {auth.login}: {exc}"
+            )
+
+    async def login_and_extract_credentials(
+        self,
+        page: Page,
+        ctx: BrowserContext,
+        auth: InstagramAuth,
+        target_username: str,
     ) -> dict:
         """
         Login to Instagram and extract GraphQL credentials.
@@ -61,7 +101,7 @@ class InstagramOrchestrator:
 
             # Step 2:
             credentials = await extract_credentials(
-                page, ctx, auth, self.config
+                page, ctx, auth, self.config, target_username
             )
 
             logger.bind(
@@ -111,10 +151,6 @@ class InstagramOrchestrator:
             AuthUnexpectedError: If parsing fails
         """
         try:
-            profile_link = (
-                f"{self.config.parsing.instagram_url}{target_username}"
-            )
-
             logger.bind(target=target_username, max_reels=max_reels).info(
                 "Starting to parse reels"
             )
@@ -124,7 +160,7 @@ class InstagramOrchestrator:
                 credentials=credentials,
                 config=self.config,
                 max_reels=max_reels,
-                profile_link=profile_link,
+                target_username=target_username,
                 proxy_manager=self.proxy_manager,
             )
 
@@ -167,7 +203,9 @@ class InstagramOrchestrator:
             tuple: (credentials, reels)
         """
         # Step 1: Login and extract credentials
-        credentials = await self.login_and_extract_credentials(page, ctx, auth)
+        credentials = await self.login_and_extract_credentials(
+            page, ctx, auth, target_username
+        )
 
         # Step 2: Parse reels
         reels = await self.parse_profile_reels(

@@ -14,11 +14,21 @@ from sqlalchemy.ext.asyncio import (
 
 class DatabaseSessionManager:
     def __init__(self, url: str) -> None:
+        """Initialize the DatabaseSessionManager.
+
+        Args:
+            url (str): The database connection URL.
+        """
         self._engine: AsyncEngine | None = None
         self._sessionmaker: async_sessionmaker[AsyncSession] | None = None
         self.url = url
 
     def init(self) -> None:
+        """Initialize the database engine and sessionmaker.
+
+        This method sets up the asynchronous database engine and sessionmaker
+        using the provided URL.
+        """
         logger.bind(url=self.url).info("Connecting to DB...")
         self._engine = create_async_engine(
             url=self.url,
@@ -32,6 +42,13 @@ class DatabaseSessionManager:
         logger.bind(url=self.url).info("Successfully connected to DB")
 
     async def close(self) -> None:
+        """Close the database connection.
+
+        This method disposes of the database engine and resets the internal state.
+
+        Raises:
+            RuntimeError: If the database engine is not started.
+        """
         logger.bind(url=self.url).info("Closing DB connection...")
         if self._engine is None:
             logger.bind(url=self.url).critical("DB engine is not started")
@@ -39,12 +56,21 @@ class DatabaseSessionManager:
         await self._engine.dispose()
         self._engine = None
         self._sessionmaker = None
-        logger.bind(url=self.url).info(
-            "DB connection was successfully closed"
-        )
+        logger.bind(url=self.url).info("DB connection was successfully closed")
 
     @contextlib.asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
+        """Provide an asynchronous database session.
+
+        This context manager yields an AsyncSession for database operations.
+        It handles logging, rollback on exceptions, and session cleanup.
+
+        Yields:
+            AsyncSession: The database session.
+
+        Raises:
+            RuntimeError: If the DatabaseSessionManager is not initialized.
+        """
         if self._sessionmaker is None:
             logger.critical("DatabaseSessionManager is not initialized")
             raise RuntimeError("DatabaseSessionManager is not initialized")
@@ -66,6 +92,17 @@ class DatabaseSessionManager:
 
     @contextlib.asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
+        """Provide an asynchronous database connection.
+
+        This context manager yields an AsyncConnection for database operations.
+        It handles logging, rollback on exceptions, and connection cleanup.
+
+        Yields:
+            AsyncConnection: The database connection.
+
+        Raises:
+            RuntimeError: If the DatabaseSessionManager is not initialized.
+        """
         if self._engine is None:
             logger.critical("DatabaseSessionManager is not initialized")
             raise RuntimeError("DatabaseSessionManager is not initialized")

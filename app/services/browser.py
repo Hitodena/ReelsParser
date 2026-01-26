@@ -18,6 +18,7 @@ class BrowserManager:
     """Browser manager for Playwright."""
 
     def __init__(self, config: Config) -> None:
+        """Initialize the BrowserManager with the given configuration."""
         self._ua = UserAgent(
             browsers=["Chrome", "Google"],
             os=["Windows"],
@@ -74,6 +75,7 @@ class BrowserManager:
     async def context(
         self, proxy: dict | None = None
     ) -> AsyncGenerator[tuple[Page, BrowserContext], None]:
+        """Create a new browser context and page, optionally with proxy."""
         if not self._browser:
             logger.error("Browser is not started")
             raise RuntimeError(

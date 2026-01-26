@@ -25,6 +25,8 @@ class EnvironmentSettings(BaseSettings):
     db_port: int = Field(default=5432)
     db_name: str = Field(default="postgres")
 
+    redis_url: str = Field(default="redis://localhost:6379")
+
     cors_allow_origins: Sequence[str] = Field(default=["*"])
     cors_allow_credentials: bool = Field(default=True)
 

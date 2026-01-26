@@ -81,7 +81,7 @@ async def _attempt_old_layout_login(
             password=auth.password,
             selector=cfg.identifiers.old_field_password_selector,
         ).debug("Filling password")
-        await password_field.fill(auth.password.get_secret_value())
+        await password_field.fill(auth.password)
         await asyncio.sleep(cfg.network.sleep_between_actions)
 
         # Click login button
@@ -142,7 +142,7 @@ async def _attempt_new_layout_login(
             password=auth.password,
             selector=cfg.identifiers.new_field_password_selector,
         ).debug("Filling password")
-        await password_field.fill(auth.password.get_secret_value())
+        await password_field.fill(auth.password)
         await asyncio.sleep(cfg.network.sleep_between_actions)
 
         # Click login button
@@ -203,7 +203,7 @@ async def _handle_additional_login_steps(
             login=auth.login,
             selector=cfg.identifiers.additional_password_selector,
         ).debug("Filling additional password")
-        await password_field.fill(auth.password.get_secret_value())
+        await password_field.fill(auth.password)
         await asyncio.sleep(cfg.network.sleep_between_actions)
 
         # Click additional login button

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, computed_field
 
@@ -8,7 +9,7 @@ class ProxyModel(BaseModel):
     port: int
     username: str | None = None
     password: str | None = None
-    protocol: str = "http"
+    protocol: Literal["http"] = "http"
 
     last_used: datetime | None = None
     request_count: int = 0
@@ -19,7 +20,6 @@ class ProxyModel(BaseModel):
     @property
     def identifier(self) -> str:
         return f"{self.host}{self.port}"
-
 
     def to_playwright_proxy(self) -> dict:
         proxy = {"server": f"{self.protocol}://{self.host}:{self.port}"}
