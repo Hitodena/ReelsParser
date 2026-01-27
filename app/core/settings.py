@@ -149,3 +149,15 @@ class Identifiers(BaseModel):
         default="Log In",
         description="Selector for additional login button",
     )
+    private_account_text: str = Field(
+        default="This account is private",
+        description="Text for private account error",
+    )
+    not_found_text: str = Field(
+        default="Sorry, this page isn't available.",
+        description="Text for not found error",
+    )
+    not_found_text_alt: str = Field(
+        default="Profile isn't available",
+        description="Text for not found error",
+    )

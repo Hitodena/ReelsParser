@@ -18,12 +18,8 @@ async def parse_instagram_reels(
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=data, timeout=120)
-
-        if response.status_code != 200:
-            raise Exception(
-                f"API error: {response.status_code} - {response.text}"
-            )
+        response = await client.post(url, json=data, timeout=300)
+        response.raise_for_status()
 
         # Get file
         content = response.content

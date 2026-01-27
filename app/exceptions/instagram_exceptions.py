@@ -1,12 +1,6 @@
 from app.custom_enums import (
     InstagramErrorCodes,
-    NetworkErrorCodes,
 )
-
-RETRYABLE = {
-    NetworkErrorCodes.TIMEOUT,
-    NetworkErrorCodes.CONNECTION_ERROR,
-}
 
 
 class InstagramParserError(Exception):
@@ -18,7 +12,6 @@ class InstagramParserError(Exception):
     ) -> None:
         super().__init__(message)
         self.code = code
-        self.retryable = code in RETRYABLE
 
 
 class AuthUnexpectedError(InstagramParserError):
@@ -31,6 +24,13 @@ class AuthCredentialsError(InstagramParserError):
         super().__init__(message, code=InstagramErrorCodes.INVALID_CREDENTIALS)
 
 
-class NetworkError(InstagramParserError):
-    def __init__(self, message: str, code: NetworkErrorCodes) -> None:
-        super().__init__(message, code=code)
+class UserPrivateError(InstagramParserError):
+    def __init__(self, message: str = "This account is private") -> None:
+        super().__init__(message, code=InstagramErrorCodes.USER_PRIVATE)
+
+
+class UserNotFoundError(InstagramParserError):
+    def __init__(
+        self, message: str = "Sorry, this page isn't available."
+    ) -> None:
+        super().__init__(message, code=InstagramErrorCodes.USER_NOT_FOUND)

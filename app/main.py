@@ -78,7 +78,7 @@ async def health():
 if __name__ == "__main__":
     uvicorn.run(
         "app.main:app",
-        host="localhost",
+        host="0.0.0.0",
         port=8000,
         reload=False,
         log_level=config.environment.log_level.lower(),

@@ -2,12 +2,14 @@ from .instagram_exceptions import (
     AuthCredentialsError,
     AuthUnexpectedError,
     InstagramParserError,
-    NetworkError,
+    UserNotFoundError,
+    UserPrivateError,
 )
 
 __all__ = [
     "AuthCredentialsError",
     "InstagramParserError",
-    "NetworkError",
     "AuthUnexpectedError",
+    "UserNotFoundError",
+    "UserPrivateError",
 ]

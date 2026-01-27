@@ -14,6 +14,15 @@ class BaseDAO(Generic[T]):
 
     @classmethod
     async def add(cls, session: AsyncSession, **values: Any) -> T:
+        """Add a new instance of the model to the database.
+
+        Args:
+            session: The async database session.
+            **values: Keyword arguments representing the model fields.
+
+        Returns:
+            The newly added instance.
+        """
         logger.bind(model=cls.model, values=values).info("Adding instance")
         new_instance = cls.model(**values)
         try:
@@ -36,6 +45,15 @@ class BaseDAO(Generic[T]):
 
     @classmethod
     async def get(cls, session: AsyncSession, pk: Any) -> T | None:
+        """Retrieve an instance by its primary key.
+
+        Args:
+            session: The async database session.
+            pk: The primary key value.
+
+        Returns:
+            The instance if found, otherwise None.
+        """
         logger.bind(pk=pk, model=cls.model).info("Getting instance by pk")
         try:
             instance = await session.get(cls.model, pk)
@@ -56,6 +74,15 @@ class BaseDAO(Generic[T]):
 
     @classmethod
     async def delete(cls, session: AsyncSession, pk: Any) -> T | None:
+        """Delete an instance by its primary key.
+
+        Args:
+            session: The async database session.
+            pk: The primary key value.
+
+        Returns:
+            The deleted instance if found, otherwise None.
+        """
         logger.bind(pk=pk, model=cls.model).info("Deleting instance by pk")
         try:
             instance = await session.get(cls.model, pk)
@@ -79,6 +106,15 @@ class BaseDAO(Generic[T]):
 
     @classmethod
     async def get_all(cls, session: AsyncSession, **kwargs) -> list[T] | None:
+        """Retrieve all instances matching the filter criteria.
+
+        Args:
+            session: The async database session.
+            **kwargs: Keyword arguments for filtering the instances.
+
+        Returns:
+            A list of instances if found, otherwise None.
+        """
         logger.bind(model=cls.model, kwargs=kwargs).info(
             "Getting all instances"
         )

@@ -85,9 +85,6 @@ def parse_instagram_data(data: dict, target_username: str) -> list[dict]:
     """
     reels: list = []
     edges = data["data"]["xdt_api__v1__clips__user__connection_v2"]["edges"]
-    logger.bind(target_username=target_username, edges_count=len(edges)).info(
-        "Parsing Instagram data"
-    )
 
     # Find main info
     for edge in edges:
@@ -123,9 +120,6 @@ def parse_instagram_data(data: dict, target_username: str) -> list[dict]:
             }
         )
 
-    logger.bind(target_username=target_username, count=len(reels)).info(
-        "Parsed reels"
-    )
     return reels
 
 

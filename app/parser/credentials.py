@@ -1,10 +1,14 @@
 import json
 
 from loguru import logger
-from playwright.async_api import BrowserContext, Page
+from playwright.async_api import BrowserContext, Page, expect
 
 from app.core import Config
-from app.exceptions import AuthUnexpectedError
+from app.exceptions import (
+    AuthUnexpectedError,
+    UserNotFoundError,
+    UserPrivateError,
+)
 from app.models import InstagramAuth
 
 
@@ -94,6 +98,31 @@ async def extract_credentials(
         )
         await page.wait_for_load_state("domcontentloaded")
 
+        # Check for error texts
+        try:
+            await expect(
+                page.get_by_text(cfg.identifiers.private_account_text)
+            ).to_be_visible(timeout=cfg.timeouts.timeout_for_element_state)
+            raise UserPrivateError(f"Account {target_username} is private")
+        except AssertionError:
+            pass
+
+        try:
+            await expect(
+                page.get_by_text(cfg.identifiers.not_found_text)
+            ).to_be_visible(timeout=cfg.timeouts.timeout_for_element_state)
+            raise UserNotFoundError(f"Account {target_username} not found")
+        except AssertionError:
+            pass
+
+        try:
+            await expect(
+                page.get_by_text(cfg.identifiers.not_found_text_alt)
+            ).to_be_visible(timeout=cfg.timeouts.timeout_for_element_state)
+            raise UserNotFoundError(f"Account {target_username} not found")
+        except AssertionError:
+            pass
+
         # Update cookies (they may have been refreshed)
         fresh_cookies = await ctx.cookies()
         for cookie in fresh_cookies:
@@ -109,8 +138,18 @@ async def extract_credentials(
         logger.bind(login=auth.login).info("Credentials extracted")
         return captured_data
 
-    except Exception as e:
+    except UserPrivateError:
+        logger.bind(login=auth.login, target_username=target_username).warning(
+            "Failed to extract credentials due to account privacy"
+        )
+        raise
+    except UserNotFoundError:
+        logger.bind(login=auth.login, target_username=target_username).warning(
+            "Failed to extract credentials due to account non-existing"
+        )
+        raise
+    except Exception as exc:
         logger.bind(login=auth.login).error("Failed to extract credentials")
         raise AuthUnexpectedError(
-            f"Credential extraction failed for {auth.login}: {e}"
+            f"Credential extraction failed for {auth.login}: {exc}"
         )

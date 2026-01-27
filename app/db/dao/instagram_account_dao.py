@@ -15,6 +15,16 @@ class InstagramAccountDAO(BaseDAO):
     async def get_by_login(
         cls, session: AsyncSession, login: str
     ) -> InstagramAccount | None:
+        """
+        Retrieves a valid Instagram account by its login, ordered by last used time.
+
+        Args:
+            session (AsyncSession): The database session to use for the query.
+            login (str): The login of the Instagram account to retrieve.
+
+        Returns:
+            InstagramAccount | None: The matching Instagram account if found, otherwise None.
+        """
         logger.bind(model=cls.model, login=login).info(
             "Getting instagram account by login"
         )
@@ -51,6 +61,20 @@ class InstagramAccountDAO(BaseDAO):
         cookies: dict | None = None,
         valid: bool | None = None,
     ) -> InstagramAccount | None:
+        """
+        Updates specific fields of an Instagram account by its login.
+
+        Args:
+            session (AsyncSession): The database session to use for the update.
+            login (str): The login of the Instagram account to update.
+            password (str | None): New password for the account, if provided.
+            last_used_at (datetime | None): New last used timestamp, if provided.
+            cookies (dict | None): New cookies for the account, if provided.
+            valid (bool | None): New validity status, if provided.
+
+        Returns:
+            InstagramAccount | None: The updated Instagram account if successful, otherwise None.
+        """
         logger.bind(model=cls.model, login=login).info(
             "Updating instagram account by login"
         )
@@ -61,7 +85,7 @@ class InstagramAccountDAO(BaseDAO):
             update_data["last_used_at"] = last_used_at
         if cookies:
             update_data["cookies"] = cookies
-        if valid:
+        if isinstance(valid, bool):
             update_data["valid"] = valid
         elif not update_data:
             logger.bind(model=cls.model, login=login).warning(
@@ -95,6 +119,17 @@ class InstagramAccountDAO(BaseDAO):
     async def update_validity(
         cls, session: AsyncSession, login: str, valid: bool
     ) -> InstagramAccount | None:
+        """
+        Updates the validity status of an Instagram account by its login.
+
+        Args:
+            session (AsyncSession): The database session to use for the update.
+            login (str): The login of the Instagram account to update.
+            valid (bool): The new validity status.
+
+        Returns:
+            InstagramAccount | None: The updated Instagram account if successful, otherwise None.
+        """
         logger.bind(model=cls.model, login=login, valid=valid).info(
             "Updating validity of instagram account"
         )
@@ -127,6 +162,16 @@ class InstagramAccountDAO(BaseDAO):
     async def delete_by_login(
         cls, session: AsyncSession, login: str
     ) -> InstagramAccount | None:
+        """
+        Deletes a valid Instagram account by its login.
+
+        Args:
+            session (AsyncSession): The database session to use for the deletion.
+            login (str): The login of the Instagram account to delete.
+
+        Returns:
+            InstagramAccount | None: The deleted Instagram account if successful, otherwise None.
+        """
         logger.bind(model=cls.model, login=login).info(
             "Getting instagram account by login"
         )
@@ -137,6 +182,7 @@ class InstagramAccountDAO(BaseDAO):
         )
         try:
             result = await session.execute(stmt)
+            await session.commit()
             account = result.scalar_one_or_none()
             if not account:
                 logger.bind(model=cls.model, login=login).warning(
@@ -157,6 +203,15 @@ class InstagramAccountDAO(BaseDAO):
     async def get_least_used(
         cls, session: AsyncSession
     ) -> InstagramAccount | None:
+        """
+        Retrieves the least recently used valid Instagram account.
+
+        Args:
+            session (AsyncSession): The database session to use for the query.
+
+        Returns:
+            InstagramAccount | None: The least recently used valid account if found, otherwise None.
+        """
         logger.bind(model=cls.model).info(
             "Getting least recently used Instagram account"
         )

@@ -1,5 +1,6 @@
 import re
 
+import httpx
 from aiogram import Dispatcher, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -72,9 +73,29 @@ async def max_reels_input(message: Message, state: FSMContext):
             caption="Парсинг завершен! Вот ваш файл с reels.",
         )
 
-    except Exception as e:
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 403:
+            await message.answer(
+                "Данный аккаунт приватный\nПопробуйте еще раз с командой /parse."
+            )
+        elif exc.response.status_code == 404:
+            if "No valid Instagram accounts available" in str(
+                exc.response.text
+            ):
+                await message.answer(
+                    "Нет аккаунтов для парсинга. Попросите админа добавить аккаунт."
+                )
+            else:
+                await message.answer(
+                    "Данный юзернейм не найден\nПопробуйте еще раз с командой /parse."
+                )
+        else:
+            await message.answer(
+                f"Произошла ошибка при парсинге: {str(exc)}\nПопробуйте еще раз с командой /parse."
+            )
+    except Exception as exc:
         await message.answer(
-            f"Произошла ошибка при парсинге: {str(e)}\nПопробуйте еще раз с командой /parse."
+            f"Произошла ошибка при парсинге: {str(exc)}\nПопробуйте еще раз с командой /parse."
         )
 
     await state.clear()

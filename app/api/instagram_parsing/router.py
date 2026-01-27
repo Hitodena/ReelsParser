@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from app.db.dao import InstagramAccountDAO
-from app.exceptions.instagram_exceptions import AuthUnexpectedError
+from app.exceptions import (
+    AuthUnexpectedError,
+    UserNotFoundError,
+    UserPrivateError,
+)
 from app.models import InstagramAuth
 from app.services import (
     BrowserManager,
@@ -60,11 +64,11 @@ async def parse_reels_xlsx(
     4. Generate XLSX file with results
 
     **XLSX Columns:**
-    - url: Direct link to the reel
-    - views: Number of views
-    - likes: Number of likes
-    - comments: Number of comments
-    - er: Engagement Rate (calculated as (likes + comments) / views)
+    - Link: Direct link to the reel
+    - Views: Number of views
+    - Likes: Number of likes
+    - Comments: Number of comments
+    - Virality: Engagement Rate (calculated as (likes + comments) / views)
 
     Args:
         data: Parsing parameters
@@ -113,6 +117,10 @@ async def parse_reels_xlsx(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to use account '{account.login}' with unexpected error, account has been invalidated: {exc}.",
         )
+    except UserPrivateError:
+        raise HTTPException(status_code=403, detail="This account private")
+    except UserNotFoundError:
+        raise HTTPException(status_code=404, detail="Account not found")
     except Exception as exc:
         async with db.session() as session:
             await InstagramAccountDAO.update_by_login(
@@ -132,8 +140,30 @@ async def parse_reels_xlsx(
             last_used_at=datetime.now(),
         )
 
-    reels = [r for r in reels if isinstance(r, dict)]
+    required_keys = ["url", "views", "likes", "comments", "er"]
+    reels = [
+        r
+        for r in reels
+        if isinstance(r, dict) and all(k in r for k in required_keys)
+    ]
+
+    if not reels:
+        raise HTTPException(500, "Failed to get reels")
+
     df = pd.DataFrame(reels)
+    df = df[required_keys].rename(
+        columns={
+            "url": "Ссылка",
+            "views": "Просмотры",
+            "likes": "Лайки",
+            "comments": "Комменты",
+            "er": "Вирусность",
+        }
+    )
+    df["Просмотры"] = df["Просмотры"].astype(int)
+    df["Лайки"] = df["Лайки"].astype(int)
+    df["Комменты"] = df["Комменты"].astype(int)
+    df["Вирусность"] = df["Вирусность"].astype(float)
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:

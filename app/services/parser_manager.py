@@ -2,7 +2,12 @@ from loguru import logger
 from playwright.async_api import BrowserContext, Page
 
 from app.core import Config
-from app.exceptions import AuthCredentialsError, AuthUnexpectedError
+from app.exceptions import (
+    AuthCredentialsError,
+    AuthUnexpectedError,
+    UserNotFoundError,
+    UserPrivateError,
+)
 from app.models import InstagramAuth
 from app.parser import (
     extract_credentials,
@@ -87,6 +92,8 @@ class InstagramOrchestrator:
         Raises:
             AuthCredentialsError: If login fails due to invalid credentials
             AuthUnexpectedError: For unexpected errors
+            UserPrivateError: If the target user account is private
+            UserNotFoundError: If the target user is not found
         """
         try:
             logger.bind(login=auth.login).info(
@@ -117,17 +124,27 @@ class InstagramOrchestrator:
             return credentials
 
         except AuthCredentialsError as exc:
-            logger.bind(error_message=exc, login=auth.login).error(
+            logger.bind(error_message=str(exc), login=auth.login).error(
                 "Invalid credentials"
             )
             raise
+        except UserPrivateError as exc:
+            logger.bind(error_message=str(exc), login=auth.login).error(
+                "User account is private"
+            )
+            raise
+        except UserNotFoundError as exc:
+            logger.bind(error_message=str(exc), login=auth.login).error(
+                "User not found"
+            )
+            raise
         except AuthUnexpectedError as exc:
-            logger.bind(error_message=exc, login=auth.login).error(
+            logger.bind(error_message=str(exc), login=auth.login).error(
                 "Unexpected error during extraction"
             )
             raise
         except Exception as exc:
-            logger.bind(error_message=exc, login=auth.login).exception(
+            logger.bind(error_message=str(exc), login=auth.login).exception(
                 "Failed to extract credentials"
             )
             raise AuthUnexpectedError(
