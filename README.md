@@ -196,3 +196,402 @@ async def parse_reels():
 
 - Content-Type: `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
 - Content-Disposition: `attachment; filename=iamrigbycat_reels.xlsx`
+
+### Instagram Account Management
+
+#### GET /accounts
+
+Retrieves a list of all Inst1agram accounts.
+
+**Method:** GET
+
+**Response:**
+
+- Status 200: List of accounts
+- Status 404: No accounts found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"total": 2,
+	"accounts": [
+		{
+			"login": "user1",
+			"password": "password1",
+			"cookies": {},
+			"last_used_at": "2024-01-01T12:00:00Z"
+		},
+		{
+			"login": "user2",
+			"password": "password2",
+			"cookies": {},
+			"last_used_at": "2024-01-02T12:00:00Z"
+		}
+	]
+}
+```
+
+#### GET /accounts/{login}
+
+Retrieves detailed information about a specific Instagram account.
+
+**Method:** GET
+
+**Parameters:**
+
+- `login` (string, required): Instagram account login
+
+**Response:**
+
+- Status 200: Account details
+- Status 404: Account not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"login": "user1",
+	"password": "password1",
+	"cookies": {},
+	"last_used_at": "2024-01-01T12:00:00Z"
+}
+```
+
+#### POST /accounts
+
+Adds a new Instagram account by logging in and extracting credentials.
+
+**Method:** POST
+
+**Request Body:**
+
+```json
+{
+	"login": "newuser",
+	"password": "newpassword"
+}
+```
+
+**Response:**
+
+- Status 201: Account added successfully
+- Status 400: Account already exists or invalid credentials
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"login": "newuser",
+	"password": "newpassword",
+	"cookies": {},
+	"last_used_at": null
+}
+```
+
+#### PUT /accounts/{login}
+
+Updates the password of a specific Instagram account.
+
+**Method:** PUT
+
+**Parameters:**
+
+- `login` (string, required): Instagram account login
+
+**Request Body:**
+
+```json
+{
+	"password": "newpassword"
+}
+```
+
+**Response:**
+
+- Status 200: Account updated successfully
+- Status 404: Account not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"login": "user1",
+	"password": "newpassword",
+	"cookies": {},
+	"last_used_at": "2024-01-01T12:00:00Z"
+}
+```
+
+#### PATCH /accounts/{login}/validity
+
+Updates the validity status of a specific Instagram account.
+
+**Method:** PATCH
+
+**Parameters:**
+
+- `login` (string, required): Instagram account login
+
+**Request Body:**
+
+```json
+{
+	"valid": true
+}
+```
+
+**Response:**
+
+- Status 200: Account validity updated
+- Status 404: Account not found
+- Status 500: Internal server error
+
+#### POST /accounts/{login}/test
+
+Tests the validity of a specific Instagram account by attempting login.
+
+**Method:** POST
+
+**Parameters:**
+
+- `login` (string, required): Instagram account login
+
+**Response:**
+
+- Status 200: Account test completed
+- Status 404: Account not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"status": "valid",
+	"message": "Account login successful"
+}
+```
+
+#### DELETE /accounts/{login}
+
+Deletes a specific Instagram account.
+
+**Method:** DELETE
+
+**Parameters:**
+
+- `login` (string, required): Instagram account login
+
+**Response:**
+
+- Status 200: Account deleted successfully
+- Status 404: Account not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"status": "success"
+}
+```
+
+### Proxy Management
+
+#### GET /proxies
+
+Retrieves a list of all proxies.
+
+**Method:** GET
+
+**Response:**
+
+- Status 200: List of proxies
+- Status 404: No proxies found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"total": 2,
+	"proxies": [
+		{
+			"host": "192.168.1.1",
+			"port": 8080,
+			"is_blocked": false,
+			"request_count": 15
+		},
+		{
+			"host": "192.168.1.2",
+			"port": 8080,
+			"is_blocked": true,
+			"request_count": 5
+		}
+	]
+}
+```
+
+#### GET /proxies/{proxy_id}
+
+Retrieves detailed information about a specific proxy.
+
+**Method:** GET
+
+**Parameters:**
+
+- `proxy_id` (string, required): Proxy identifier (host:port format)
+
+**Response:**
+
+- Status 200: Proxy details
+- Status 404: Proxy not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"host": "192.168.1.1",
+	"port": 8080,
+	"is_blocked": false,
+	"request_count": 15
+}
+```
+
+#### POST /proxies
+
+Adds a new proxy to the pool.
+
+**Method:** POST
+
+**Request Body:**
+
+```json
+{
+	"host": "192.168.1.1",
+	"port": 8080,
+	"username": "admin",
+	"password": "password",
+	"protocol": "http"
+}
+```
+
+**Response:**
+
+- Status 200: Proxy added successfully
+- Status 400: Invalid proxy data
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"status": "success",
+	"proxy_id": "192.168.1.1:8080"
+}
+```
+
+#### PUT /proxies/{proxy_id}
+
+Updates information for a specific proxy.
+
+**Method:** PUT
+
+**Parameters:**
+
+- `proxy_id` (string, required): Proxy identifier (host:port format)
+
+**Request Body:**
+
+```json
+{
+	"host": "192.168.1.1",
+	"port": 9090,
+	"username": "newadmin",
+	"password": "newpassword",
+	"protocol": "http"
+}
+```
+
+**Response:**
+
+- Status 200: Proxy updated successfully
+- Status 404: Proxy not found
+- Status 500: Internal server error
+
+#### DELETE /proxies/{proxy_id}
+
+Deletes a specific proxy from the pool.
+
+**Method:** DELETE
+
+**Parameters:**
+
+- `proxy_id` (string, required): Proxy identifier (host:port format)
+
+**Response:**
+
+- Status 200: Proxy deleted successfully
+- Status 404: Proxy not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"status": "success"
+}
+```
+
+#### POST /proxies/{proxy_id}/block
+
+Manually blocks a specific proxy.
+
+**Method:** POST
+
+**Parameters:**
+
+- `proxy_id` (string, required): Proxy identifier (host:port format)
+
+**Response:**
+
+- Status 200: Proxy blocked successfully
+- Status 404: Proxy not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"status": "success"
+}
+```
+
+#### POST /proxies/{proxy_id}/unblock
+
+Manually unblocks a specific proxy.
+
+**Method:** POST
+
+**Parameters:**
+
+- `proxy_id` (string, required): Proxy identifier (host:port format)
+
+**Response:**
+
+- Status 200: Proxy unblocked successfully
+- Status 404: Proxy not found
+- Status 500: Internal server error
+
+**Response Body:**
+
+```json
+{
+	"status": "success"
+}
+```
