@@ -91,11 +91,11 @@ async def max_reels_input(message: Message, state: FSMContext):
                 )
         else:
             await message.answer(
-                f"Произошла ошибка при парсинге: {str(exc)}\nПопробуйте еще раз с командой /parse."
+                "Произошла ошибка при парсинге. \nПопробуйте еще раз с командой /parse."
             )
-    except Exception as exc:
+    except Exception:
         await message.answer(
-            f"Произошла ошибка при парсинге: {str(exc)}\nПопробуйте еще раз с командой /parse."
+            "Произошла ошибка при парсинге. \nПопробуйте еще раз с командой /parse."
         )
 
     await state.clear()

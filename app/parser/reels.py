@@ -18,6 +18,7 @@ async def fetch_instagram_reels(
     client: httpx.AsyncClient,
     config: Config,
     target_username: str,
+    followers: int,
 ) -> dict:
     """
     Fetches Instagram Reels data using the provided credentials and parameters.
@@ -72,16 +73,19 @@ async def fetch_instagram_reels(
     return response.json()
 
 
-def parse_instagram_data(data: dict, target_username: str) -> list[dict]:
+def parse_instagram_data(
+    data: dict, target_username: str, followers: int
+) -> list[dict]:
     """
-    Parses Instagram GraphQL response and extracts Reels data.
+    Parses Instagram GraphQL response and extracts Reels data with virality calculation.
 
     Args:
         data (dict): GraphQL response.
-        profile_link (str): Profile link for logging.
+        target_username (str): Target username for logging.
+        followers (int): Number of followers for virality calculation.
 
     Returns:
-        list[dict]: List of parsed reels with url, views, likes, comments, ER.
+        list[dict]: List of parsed reels with url, views, likes, comments, virality.
     """
     reels: list = []
     edges = data["data"]["xdt_api__v1__clips__user__connection_v2"]["edges"]
@@ -108,7 +112,7 @@ def parse_instagram_data(data: dict, target_username: str) -> list[dict]:
         likes = node["like_count"]
         comments = node["comment_count"]
 
-        er = ((likes + comments) / views) if views > 0 else 0
+        virality = views / followers if views > 0 else 0
 
         reels.append(
             {
@@ -116,7 +120,7 @@ def parse_instagram_data(data: dict, target_username: str) -> list[dict]:
                 "views": views,
                 "likes": likes,
                 "comments": comments,
-                "er": round(er, 3),
+                "virality": round(virality, 3),
             }
         )
 
@@ -129,18 +133,21 @@ async def fetch_all_instagram_reels(
     max_reels: int | None,
     target_username: str,
     proxy_manager: "ProxyManager",
+    followers: int,
 ) -> list[dict]:
     """
     Fetches all Instagram Reels with pagination and error handling.
 
     Args:
         credentials (dict): Initial credentials from extract_instagram_credentials.
-        profile_link (str): Profile link for logging.
+        config (Config): Configuration object.
         max_reels (int): Max amount of reels to parse.
+        target_username (str): Target username for logging.
         proxy_manager (ProxyManager): Proxy manager object.
+        followers (int): Number of followers for virality calculation.
 
     Returns:
-        list[dict]: List of all reels with ER calculated.
+        list[dict]: List of all reels with virality calculated.
     """
     max_retries = config.retries.max_retries
     logger.bind(
@@ -173,10 +180,12 @@ async def fetch_all_instagram_reels(
                             data["variables"]["after"] = cursor
 
                         response = await fetch_instagram_reels(
-                            data, client, config, target_username
+                            data, client, config, target_username, followers
                         )
 
-                        reels = parse_instagram_data(response, target_username)
+                        reels = parse_instagram_data(
+                            response, target_username, followers
+                        )
                         if max_reels:
                             remaining = max_reels - len(all_reels)
                             all_reels.extend(reels[:remaining])

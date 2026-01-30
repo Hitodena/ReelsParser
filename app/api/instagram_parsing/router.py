@@ -140,7 +140,7 @@ async def parse_reels_xlsx(
             last_used_at=datetime.now(),
         )
 
-    required_keys = ["url", "views", "likes", "comments", "er"]
+    required_keys = ["url", "views", "likes", "comments", "virality"]
     reels = [
         r
         for r in reels
@@ -157,7 +157,7 @@ async def parse_reels_xlsx(
             "views": "Просмотры",
             "likes": "Лайки",
             "comments": "Комменты",
-            "er": "Вирусность",
+            "virality": "Вирусность",
         }
     )
     df["Просмотры"] = df["Просмотры"].astype(int)

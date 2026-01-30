@@ -161,3 +161,7 @@ class Identifiers(BaseModel):
         default="Profile isn't available",
         description="Text for not found error",
     )
+    followers_selector: str = Field(
+        default='a[href*="/followers/"] span[title]',
+        description="Selector for followers count element",
+    )

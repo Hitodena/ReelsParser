@@ -10,7 +10,7 @@ from app.exceptions import (
 )
 from app.models import InstagramAuth
 from app.parser import (
-    extract_credentials,
+    extract_credentials_with_followers,
     fetch_all_instagram_reels,
     login_to_instagram,
 )
@@ -77,17 +77,18 @@ class InstagramOrchestrator:
         ctx: BrowserContext,
         auth: InstagramAuth,
         target_username: str,
-    ) -> dict:
+    ) -> tuple[dict, int]:
         """
-        Login to Instagram and extract GraphQL credentials.
+        Login to Instagram and extract GraphQL credentials with followers count.
 
         Args:
             page: Playwright page instance
             ctx: Browser context
             auth: Authentication credentials (login + password OR cookies)
+            target_username: Target username to extract followers for
 
         Returns:
-            dict: Credentials containing doc_id, variables, headers, cookies
+            tuple[dict, int]: Tuple containing (credentials dict, followers count)
 
         Raises:
             AuthCredentialsError: If login fails due to invalid credentials
@@ -110,8 +111,8 @@ class InstagramOrchestrator:
             else:
                 logger.bind(login=auth.login).info("Using existing cookies")
 
-            # Step 2:
-            credentials = await extract_credentials(
+            # Step 2: Extract credentials and followers
+            credentials, followers = await extract_credentials_with_followers(
                 page, ctx, auth, self.config, target_username
             )
 
@@ -119,9 +120,10 @@ class InstagramOrchestrator:
                 login=auth.login,
                 has_doc_id=bool(credentials.get("doc_id")),
                 has_cookies=bool(credentials.get("cookies")),
-            ).info("Successfully extracted credentials")
+                followers=followers,
+            ).info("Successfully extracted credentials and followers")
 
-            return credentials
+            return credentials, followers
 
         except AuthCredentialsError as exc:
             logger.bind(error_message=str(exc), login=auth.login).error(
@@ -155,6 +157,7 @@ class InstagramOrchestrator:
         self,
         credentials: dict,
         target_username: str,
+        followers: int,
         max_reels: int | None = None,
     ) -> list[dict]:
         """
@@ -178,6 +181,7 @@ class InstagramOrchestrator:
 
             # Fetch all reels with pagination
             reels = await fetch_all_instagram_reels(
+                followers=followers,
                 credentials=credentials,
                 config=self.config,
                 max_reels=max_reels,
@@ -224,7 +228,7 @@ class InstagramOrchestrator:
             tuple: (reels, credentials)
         """
         # Step 1: Login and extract credentials
-        credentials = await self.login_and_extract_credentials(
+        credentials, followers = await self.login_and_extract_credentials(
             page, ctx, auth, target_username
         )
 
@@ -233,6 +237,7 @@ class InstagramOrchestrator:
             credentials=credentials,
             target_username=target_username,
             max_reels=max_reels,
+            followers=followers,
         )
 
         return reels, credentials

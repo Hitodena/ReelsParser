@@ -12,6 +12,56 @@ from app.exceptions import (
 from app.models import InstagramAuth
 
 
+async def extract_credentials_with_followers(
+    page: Page,
+    ctx: BrowserContext,
+    auth: InstagramAuth,
+    cfg: Config,
+    target_username: str,
+) -> tuple[dict, int]:
+    """
+    Extract GraphQL credentials and followers count by intercepting Instagram API requests.
+
+    This function loads cookies, navigates to the user's reels page, captures
+    the necessary headers, variables, and updated cookies from GraphQL requests,
+    and extracts the followers count from the page.
+
+    Args:
+        page: Playwright page instance
+        ctx: Browser context for cookie management
+        auth: InstagramAuth object with login and cookies
+        cfg: Configuration object with URLs and identifiers
+        target_username: Target username to extract followers for
+
+    Returns:
+        tuple[dict, int]: Tuple containing (credentials dict, followers count)
+    """
+    credentials = await extract_credentials(
+        page, ctx, auth, cfg, target_username
+    )
+
+    # Extract followers count1
+    try:
+        followers_element = page.locator(
+            cfg.identifiers.followers_selector
+        ).first
+        followers_text = await followers_element.get_attribute(
+            "title", timeout=cfg.timeouts.timeout_element * 1000
+        )
+        if followers_text:
+            # Extract number from title, e.g., "1,234 followers" -> 1234
+            followers_count = int("".join(filter(str.isdigit, followers_text)))
+        else:
+            followers_count = 0
+    except Exception as exc:
+        logger.bind(login=auth.login, target_username=target_username).warning(
+            f"Failed to extract followers count: {exc}"
+        )
+        followers_count = 0
+
+    return credentials, followers_count
+
+
 async def extract_credentials(
     page: Page,
     ctx: BrowserContext,
