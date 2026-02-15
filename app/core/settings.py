@@ -18,6 +18,9 @@ class Retries(BaseModel):
     max_proxy_get_attempts: int = Field(
         default=3, description="Maximum number of proxy retrieval retries"
     )
+    max_proxy_parsing_retries: int = Field(
+        default=1, description="Maximum number of proxy parsing retries"
+    )
     max_retries: int = Field(
         default=3, description="Maximum number of retries for fetching reels"
     )

@@ -10,4 +10,5 @@ class InstagramErrorCodes(StrEnum):
 
 class ProxyErrorCodes(StrEnum):
     UNEXPECTED_ERROR = "proxy_unexpected_error"
-    EXHAUSTED_ERROR = "proxy_exhausted"
+    TOO_MANY_ATTEMPTS_ERROR = "proxy_too_many_attempts"
+    FORBIDDEN_ERROR = "proxy_forbidden"

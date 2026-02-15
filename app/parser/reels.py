@@ -2,15 +2,17 @@ import asyncio
 import json
 import random
 import time
-from typing import TYPE_CHECKING
 
 import httpx
 from loguru import logger
 
 from app.core import Config
-
-if TYPE_CHECKING:
-    from app.services import ProxyManager
+from app.exceptions import (
+    ProxyError,
+    ProxyForbiddenError,
+    ProxyTooManyAttemptsError,
+    ProxyUnexpectedError,
+)
 
 
 async def fetch_instagram_reels(
@@ -131,8 +133,8 @@ async def fetch_all_instagram_reels(
     credentials: dict,
     config: Config,
     max_reels: int | None,
+    formatted_httpx_proxy: str | None,
     target_username: str,
-    proxy_manager: "ProxyManager",
     followers: int,
 ) -> list[dict]:
     """
@@ -142,12 +144,17 @@ async def fetch_all_instagram_reels(
         credentials (dict): Initial credentials from extract_instagram_credentials.
         config (Config): Configuration object.
         max_reels (int): Max amount of reels to parse.
+        formatted_httpx_proxy (str | None): Proxy string in httpx format.
         target_username (str): Target username for logging.
-        proxy_manager (ProxyManager): Proxy manager object.
         followers (int): Number of followers for virality calculation.
 
     Returns:
         list[dict]: List of all reels with virality calculated.
+
+    Raises:
+        ProxyForbiddenError: If 403 error with proxy (raised immediately).
+        ProxyTooManyAttemptsError: If 429 error after all retries exhausted.
+        ProxyUnexpectedError: If network error after all retries exhausted.
     """
     max_retries = config.retries.max_retries
     logger.bind(
@@ -161,13 +168,12 @@ async def fetch_all_instagram_reels(
 
     # Load data from data (cookies, headers, data)
     data = json.loads(json.dumps(credentials))
-    proxy = await proxy_manager.get_least_used()
-    proxy_formatted = None
-    if proxy:
-        proxy_formatted = proxy.to_httpx_proxy()
+
+    # Track proxy exception to raise after retries exhausted
+    proxy_exception_to_raise: ProxyError | None = None
 
     try:
-        async with httpx.AsyncClient(proxy=proxy_formatted) as client:
+        async with httpx.AsyncClient(proxy=formatted_httpx_proxy) as client:
             while has_next:
                 if max_reels and len(all_reels) >= max_reels:
                     break
@@ -202,7 +208,7 @@ async def fetch_all_instagram_reels(
 
                     except httpx.HTTPStatusError as exc:
                         if exc.response.status_code == 429:
-                            # Rate limit
+                            # Rate limit - retry with backoff
                             wait_time = config.network.rate_limit_wait_base * (
                                 config.network.backoff_factor**retries
                             )
@@ -211,45 +217,82 @@ async def fetch_all_instagram_reels(
                                 status_code=exc.response.status_code,
                                 wait_time=wait_time,
                                 retries=retries,
-                            ).warning("Rate limit hit")
+                                proxy=formatted_httpx_proxy,
+                            ).warning("Rate limit hit, waiting before retry")
                             await asyncio.sleep(wait_time)
                             retries += 1
-                            if proxy:
-                                await proxy_manager.block_proxy(
-                                    proxy.identifier, 10
+                            # Only raise after all retries exhausted
+                            if (
+                                retries >= max_retries
+                                and formatted_httpx_proxy
+                            ):
+                                proxy_exception_to_raise = ProxyTooManyAttemptsError(
+                                    f"Rate limit exhausted for {formatted_httpx_proxy}, error: {str(exc)}",
+                                    partial_results=all_reels,
                                 )
+                                break
+                        elif exc.response.status_code == 403:
+                            # Forbidden error - raise IMMEDIATELY for proxy
+                            logger.bind(
+                                error_message=str(exc),
+                                status_code=exc.response.status_code,
+                                retries=retries,
+                                proxy=formatted_httpx_proxy,
+                            ).warning("Forbidden error")
+                            if formatted_httpx_proxy:
+                                raise ProxyForbiddenError(
+                                    f"Forbidden: {formatted_httpx_proxy}, error: {str(exc)}",
+                                    partial_results=all_reels,
+                                )
+                            # If no proxy, retry as normal
+                            retries += 1
+                            if retries >= max_retries:
+                                raise
                         else:
                             raise
 
                     except (httpx.TimeoutException, httpx.NetworkError) as exc:
                         retries += 1
-                        if proxy:
-                            await proxy_manager.block_proxy(
-                                proxy.identifier, 60
-                            )
                         logger.bind(
-                            error_message=exc,
+                            error_message=str(exc),
                             retries=retries,
                             max_retries=max_retries,
+                            proxy=formatted_httpx_proxy,
                         ).warning("Network error, retrying")
                         if retries >= max_retries:
+                            if formatted_httpx_proxy:
+                                proxy_exception_to_raise = ProxyUnexpectedError(
+                                    f"Network error exhausted for {formatted_httpx_proxy}, error: {str(exc)}",
+                                    partial_results=all_reels,
+                                )
+                                break
                             raise
                         await asyncio.sleep(
                             config.network.sleep_between_requests_min
                             * config.network.backoff_factor**retries
                         )
 
+                # Exit pagination loop if proxy exception tracked
+                if proxy_exception_to_raise:
+                    break
+
         logger.bind(
             target_username=target_username, total_reels=len(all_reels)
         ).info("Completed fetching all Instagram reels")
+    except ProxyForbiddenError:
+        # Propagate immediately
+        raise
     except Exception as exc:
         returned_reels = all_reels[:max_reels] if max_reels else all_reels
         logger.bind(
-            error_message=exc,
+            error_message=str(exc),
             target_username=target_username,
             total_reels=len(returned_reels),
         ).exception(
             "Exception occurred while fetching reels, returning collected reels"
         )
     finally:
+        # Return partial results
+        if proxy_exception_to_raise:
+            raise proxy_exception_to_raise
         return all_reels
