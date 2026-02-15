@@ -1,9 +1,10 @@
 from .app_environment import AppEnvironment
-from .error_codes import InstagramErrorCodes
+from .error_codes import InstagramErrorCodes, ProxyErrorCodes
 from .log_level import LogLevel
 
 __all__ = [
     "AppEnvironment",
     "LogLevel",
     "InstagramErrorCodes",
+    "ProxyErrorCodes",
 ]

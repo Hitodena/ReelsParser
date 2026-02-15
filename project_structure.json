@@ -1,0 +1,493 @@
+{
+  "name": "InstagramReelsTGBot",
+  "type": "directory",
+  "children": [
+    {
+      "name": ".env.test",
+      "type": "file",
+      "size": 362
+    },
+    {
+      "name": ".gitignore",
+      "type": "file",
+      "size": 131
+    },
+    {
+      "name": ".python-version",
+      "type": "file",
+      "size": 5
+    },
+    {
+      "name": "alembic.ini",
+      "type": "file",
+      "size": 4955
+    },
+    {
+      "name": "docker-compose.yml",
+      "type": "file",
+      "size": 1697
+    },
+    {
+      "name": "Dockerfile",
+      "type": "file",
+      "size": 1300
+    },
+    {
+      "name": "pyproject.toml",
+      "type": "file",
+      "size": 589
+    },
+    {
+      "name": "README.md",
+      "type": "file",
+      "size": 12130
+    },
+    {
+      "name": "uv.lock",
+      "type": "file",
+      "size": 272957
+    },
+    {
+      "name": "alembic",
+      "type": "directory",
+      "children": [
+        {
+          "name": "env.py",
+          "type": "file",
+          "size": 2542
+        },
+        {
+          "name": "README",
+          "type": "file",
+          "size": 58
+        },
+        {
+          "name": "script.py.mako",
+          "type": "file",
+          "size": 704
+        },
+        {
+          "name": "versions",
+          "type": "directory",
+          "children": [
+            {
+              "name": "1bd2940d9dc4_initial_revision.py",
+              "type": "file",
+              "size": 1456
+            },
+            {
+              "name": "9229f126ea4d_add_valid_column.py",
+              "type": "file",
+              "size": 1239
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "app",
+      "type": "directory",
+      "children": [
+        {
+          "name": "__init__.py",
+          "type": "file",
+          "size": 64
+        },
+        {
+          "name": "main.py",
+          "type": "file",
+          "size": 2037
+        },
+        {
+          "name": "api",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 356
+            },
+            {
+              "name": "deps.py",
+              "type": "file",
+              "size": 942
+            },
+            {
+              "name": "instagram_account",
+              "type": "directory",
+              "children": [
+                {
+                  "name": "__init__.py",
+                  "type": "file",
+                  "size": 68
+                },
+                {
+                  "name": "router.py",
+                  "type": "file",
+                  "size": 8970
+                },
+                {
+                  "name": "schemas.py",
+                  "type": "file",
+                  "size": 1168
+                }
+              ]
+            },
+            {
+              "name": "instagram_parsing",
+              "type": "directory",
+              "children": [
+                {
+                  "name": "__init__.py",
+                  "type": "file",
+                  "size": 68
+                },
+                {
+                  "name": "router.py",
+                  "type": "file",
+                  "size": 5867
+                },
+                {
+                  "name": "schemas.py",
+                  "type": "file",
+                  "size": 577
+                }
+              ]
+            },
+            {
+              "name": "proxy",
+              "type": "directory",
+              "children": [
+                {
+                  "name": "__init__.py",
+                  "type": "file",
+                  "size": 64
+                },
+                {
+                  "name": "router.py",
+                  "type": "file",
+                  "size": 6179
+                },
+                {
+                  "name": "schemas.py",
+                  "type": "file",
+                  "size": 3188
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "core",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 297
+            },
+            {
+              "name": "config.py",
+              "type": "file",
+              "size": 1019
+            },
+            {
+              "name": "env.py",
+              "type": "file",
+              "size": 1745
+            },
+            {
+              "name": "logging_settings.py",
+              "type": "file",
+              "size": 2679
+            },
+            {
+              "name": "settings.py",
+              "type": "file",
+              "size": 5643
+            }
+          ]
+        },
+        {
+          "name": "custom_enums",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 210
+            },
+            {
+              "name": "app_environment.py",
+              "type": "file",
+              "size": 98
+            },
+            {
+              "name": "error_codes.py",
+              "type": "file",
+              "size": 233
+            },
+            {
+              "name": "log_level.py",
+              "type": "file",
+              "size": 142
+            }
+          ]
+        },
+        {
+          "name": "db",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 0
+            },
+            {
+              "name": "dao",
+              "type": "directory",
+              "children": [
+                {
+                  "name": "__init__.py",
+                  "type": "file",
+                  "size": 93
+                },
+                {
+                  "name": "base_dao.py",
+                  "type": "file",
+                  "size": 4764
+                },
+                {
+                  "name": "instagram_account_dao.py",
+                  "type": "file",
+                  "size": 8717
+                }
+              ]
+            },
+            {
+              "name": "models",
+              "type": "directory",
+              "children": [
+                {
+                  "name": "__init__.py",
+                  "type": "file",
+                  "size": 115
+                },
+                {
+                  "name": "base.py",
+                  "type": "file",
+                  "size": 700
+                },
+                {
+                  "name": "instagram_account.py",
+                  "type": "file",
+                  "size": 764
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "exceptions",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 322
+            },
+            {
+              "name": "instagram_exceptions.py",
+              "type": "file",
+              "size": 1065
+            }
+          ]
+        },
+        {
+          "name": "models",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 114
+            },
+            {
+              "name": "instagram.py",
+              "type": "file",
+              "size": 834
+            },
+            {
+              "name": "proxy.py",
+              "type": "file",
+              "size": 1027
+            }
+          ]
+        },
+        {
+          "name": "parser",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 332
+            },
+            {
+              "name": "auth.py",
+              "type": "file",
+              "size": 12141
+            },
+            {
+              "name": "credentials.py",
+              "type": "file",
+              "size": 7376
+            },
+            {
+              "name": "reels.py",
+              "type": "file",
+              "size": 8905
+            }
+          ]
+        },
+        {
+          "name": "services",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 362
+            },
+            {
+              "name": "browser.py",
+              "type": "file",
+              "size": 4700
+            },
+            {
+              "name": "db_manager.py",
+              "type": "file",
+              "size": 4582
+            },
+            {
+              "name": "parser_manager.py",
+              "type": "file",
+              "size": 8313
+            },
+            {
+              "name": "proxy_manager.py",
+              "type": "file",
+              "size": 9896
+            },
+            {
+              "name": "redis_manager.py",
+              "type": "file",
+              "size": 628
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bot",
+      "type": "directory",
+      "children": [
+        {
+          "name": "__init__.py",
+          "type": "file",
+          "size": 0
+        },
+        {
+          "name": "main.py",
+          "type": "file",
+          "size": 1466
+        },
+        {
+          "name": "core",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 64
+            },
+            {
+              "name": "settings.py",
+              "type": "file",
+              "size": 369
+            }
+          ]
+        },
+        {
+          "name": "handlers",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 219
+            },
+            {
+              "name": "parse_handler.py",
+              "type": "file",
+              "size": 4642
+            },
+            {
+              "name": "start_handler.py",
+              "type": "file",
+              "size": 501
+            }
+          ]
+        },
+        {
+          "name": "keyboards",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 123
+            },
+            {
+              "name": "inline_kb.py",
+              "type": "file",
+              "size": 641
+            }
+          ]
+        },
+        {
+          "name": "states",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 68
+            },
+            {
+              "name": "parse_states.py",
+              "type": "file",
+              "size": 136
+            }
+          ]
+        },
+        {
+          "name": "utils",
+          "type": "directory",
+          "children": [
+            {
+              "name": "__init__.py",
+              "type": "file",
+              "size": 86
+            },
+            {
+              "name": "api_client.py",
+              "type": "file",
+              "size": 759
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

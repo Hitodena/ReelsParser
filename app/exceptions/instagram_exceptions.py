@@ -8,7 +8,7 @@ class InstagramParserError(Exception):
         self,
         message: str,
         *,
-        code: object,
+        code: InstagramErrorCodes,
     ) -> None:
         super().__init__(message)
         self.code = code
