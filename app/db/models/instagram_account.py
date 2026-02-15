@@ -19,4 +19,4 @@ class InstagramAccount(IDMixin, TimestampMixin, Base):
     valid: Mapped[bool] = mapped_column()
 
     def __repr__(self) -> str:
-        return f"CardVariant(id={self.id}, login={self.login})"
+        return f"Account(id={self.id}, login={self.login})"

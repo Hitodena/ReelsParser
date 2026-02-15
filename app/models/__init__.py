@@ -1,4 +1,13 @@
 from .instagram import InstagramAuth
+from .payment import PaymentModel
+from .plan import PlanModel
 from .proxy import ProxyModel
+from .tg_user import TGUserModel
 
-__all__ = ["InstagramAuth", "ProxyModel"]
+__all__ = [
+    "InstagramAuth",
+    "PaymentModel",
+    "PlanModel",
+    "ProxyModel",
+    "TGUserModel",
+]
