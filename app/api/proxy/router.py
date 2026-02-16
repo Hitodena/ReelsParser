@@ -82,19 +82,18 @@ async def list_proxies(
     Returns:
         ProxyListSchema: Response containing the total count and list of proxies.
     """
-    proxies = await proxy_manager.get_all()
+    proxies_with_status = await proxy_manager.get_all_with_status()
     proxy_list = [
         ProxyResponseSchema(
-            host=p.host,
-            port=p.port,
-            is_blocked=p.is_blocked,
-            request_count=p.request_count,
+            host=item["proxy"].host,
+            port=item["proxy"].port,
+            is_blocked=item["is_blocked"],
         )
-        for p in proxies
+        for item in proxies_with_status
     ]
     if not proxy_list:
         raise HTTPException(404, "Proxies not found")
-    return ProxyListSchema(total=len(proxies), proxies=proxy_list)
+    return ProxyListSchema(total=len(proxies_with_status), proxies=proxy_list)
 
 
 @proxy_router.delete(

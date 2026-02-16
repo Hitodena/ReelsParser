@@ -1,5 +1,6 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
+import time
+from datetime import timedelta
 
 import httpx
 from loguru import logger
@@ -10,7 +11,13 @@ from app.models import ProxyModel
 
 
 class ProxyManager:
-    """Manages proxy operations including validation, blocking, and retrieval."""
+    """Manages proxy operations using Redis pools for state management.
+
+    State is managed purely through Redis:
+    - Active proxies: stored in sorted set (proxy:sorted) with score as last_used timestamp
+    - Blocked proxies: stored with TTL key (proxy:blocked:{id}) that auto-expires
+    - Proxy data: stored as JSON (proxy:{id})
+    """
 
     def __init__(self, redis: Redis, cfg: Config) -> None:
         """Initialize the ProxyManager with Redis client and configuration.
@@ -33,7 +40,7 @@ class ProxyManager:
             proxy: ProxyModel instance to add.
 
         Returns:
-            Proxy Model if added successfully, None if validation failed.
+            Proxy identifier if added successfully.
         """
         proxy_str = proxy.to_httpx_proxy()
         is_valid = await self.validate_proxy(proxy_str)
@@ -47,6 +54,7 @@ class ProxyManager:
 
         await self.redis.set(key, proxy.model_dump_json())
 
+        # Add to sorted set with score 0 (newest/least used)
         await self.redis.zadd(self.proxy_sorted_key, {proxy.identifier: 0})
 
         logger.bind(proxy_id=proxy.identifier).info("Proxy added successfully")
@@ -61,7 +69,7 @@ class ProxyManager:
         Returns:
             ProxyModel instance if found, None otherwise.
         """
-        key = f"f{self.proxy_key}:{proxy_id}"
+        key = f"{self.proxy_key}{proxy_id}"
         data = await self.redis.get(key)
 
         if not data:
@@ -71,30 +79,49 @@ class ProxyManager:
         logger.bind(proxy_id=proxy_id).info("Proxy retrieved successfully")
         return ProxyModel.model_validate_json(data)
 
+    async def is_blocked(self, proxy_id: str) -> bool:
+        """Check if a proxy is currently blocked.
+
+        Args:
+            proxy_id: The unique identifier of the proxy.
+
+        Returns:
+            True if proxy is blocked, False otherwise.
+        """
+        block_key = f"{self.proxy_block_key}{proxy_id}"
+        return await self.redis.exists(block_key) > 0
+
     async def get_least_used(self) -> ProxyModel | None:
         """Get the least used active and unblocked proxy.
 
         Returns:
             The least used ProxyModel if available, None otherwise.
         """
-        results = await self.redis.zrange(self.proxy_sorted_key, 0, 0)
+        # Get all proxies from sorted set, sorted by score (last_used)
+        results = await self.redis.zrange(self.proxy_sorted_key, 0, -1)
 
         if not results:
             logger.warning("No proxies available")
             return None
 
-        proxy_id = results[0]
-        proxy = await self.get_proxy(proxy_id)
+        # Find first unblocked proxy
+        for proxy_id in results:
+            if await self.is_blocked(proxy_id):
+                logger.bind(proxy_id=proxy_id).debug("Skipping blocked proxy")
+                continue
 
-        if proxy and proxy.is_active and not proxy.is_blocked:
-            logger.bind(proxy_id=proxy_id).info("Least used proxy selected")
-            return proxy
+            proxy = await self.get_proxy(proxy_id)
+            if proxy:
+                logger.bind(proxy_id=proxy_id).info(
+                    "Least used proxy selected"
+                )
+                return proxy
 
-        await self.redis.zrem("proxy:sorted", proxy_id)
-        return await self.get_least_used()
+        logger.warning("No unblocked proxies available")
+        return None
 
-    async def mark_used(self, proxy_id: str):
-        """Mark a proxy as used, updating its last used time and request count.
+    async def mark_used(self, proxy_id: str) -> None:
+        """Mark a proxy as used, updating its last used timestamp.
 
         Args:
             proxy_id: The identifier of the proxy to mark as used.
@@ -102,60 +129,32 @@ class ProxyManager:
         proxy = await self.get_proxy(proxy_id)
 
         if not proxy:
-            return None
+            return
 
-        proxy.last_used = datetime.now(timezone.utc)
-        proxy.request_count += 1
+        # Update score in sorted set with current timestamp
 
-        await self.redis.set(
-            f"{self.proxy_key}{proxy_id}", proxy.model_dump_json()
-        )
+        await self.redis.zadd(self.proxy_sorted_key, {proxy_id: time.time()})
+        logger.bind(proxy_id=proxy_id).info("Proxy marked as used")
 
-        await self.redis.zadd(
-            self.proxy_sorted_key, {proxy_id: proxy.last_used.timestamp()}
-        )
-        logger.bind(proxy_id=proxy_id, request_count=proxy.request_count).info(
-            "Proxy marked as used"
-        )
-
-    async def block_proxy(self, proxy_id: str, minutes: int = 60):
+    async def block_proxy(self, proxy_id: str, minutes: int = 60) -> None:
         """Block a proxy for a specified number of minutes.
+
+        The block is stored as a Redis key with TTL, auto-expires.
 
         Args:
             proxy_id: The identifier of the proxy to block.
             minutes: Number of minutes to block the proxy (default 60).
         """
-        proxy = await self.get_proxy(proxy_id)
-        if not proxy:
-            return None
-
-        proxy.is_blocked = True
-
-        await self.redis.set(
-            f"{self.proxy_key}{proxy_id}", proxy.model_dump_json()
-        )
-
         block_key = f"{self.proxy_block_key}{proxy_id}"
         await self.redis.setex(block_key, timedelta(minutes=minutes), "1")
         logger.bind(proxy_id=proxy_id, minutes=minutes).info("Proxy blocked")
 
-    async def unblock_proxy(self, proxy_id: str):
+    async def unblock_proxy(self, proxy_id: str) -> None:
         """Unblock a previously blocked proxy.
 
         Args:
             proxy_id: The identifier of the proxy to unblock.
         """
-        proxy = await self.get_proxy(proxy_id)
-
-        if not proxy:
-            return
-
-        proxy.is_blocked = False
-
-        await self.redis.set(
-            f"{self.proxy_key}{proxy_id}", proxy.model_dump_json()
-        )
-
         await self.redis.delete(f"{self.proxy_block_key}{proxy_id}")
         logger.bind(proxy_id=proxy_id).info("Proxy unblocked")
 
@@ -170,8 +169,9 @@ class ProxyManager:
         keys = [
             k
             for k in keys
-            if not k.startswith(f"{self.proxy_block_key}")
-            and not k.startswith(f"{self.proxy_sorted_key}")
+            if not k.startswith(self.proxy_block_key.encode())
+            and not k == self.proxy_sorted_key.encode()
+            and not k.endswith(b":sorted")
         ]
 
         proxies = []
@@ -182,6 +182,24 @@ class ProxyManager:
 
         logger.bind(count=len(proxies)).info("Retrieved all proxies")
         return proxies
+
+    async def get_all_with_status(self) -> list[dict]:
+        """Retrieve all proxies with their blocked status.
+
+        Returns:
+            List of dicts with proxy data and is_blocked status.
+        """
+        proxies = await self.get_all()
+        result = []
+        for proxy in proxies:
+            is_blocked = await self.is_blocked(proxy.identifier)
+            result.append(
+                {
+                    "proxy": proxy,
+                    "is_blocked": is_blocked,
+                }
+            )
+        return result
 
     async def validate_proxy(self, proxy: str) -> bool:
         """Validate a proxy by attempting to make a request through it.
@@ -212,7 +230,7 @@ class ProxyManager:
                         return True
             except Exception as exc:
                 logger.bind(
-                    error_message=exc, proxy=proxy, attempt=attempt + 1
+                    error_message=str(exc), proxy=proxy, attempt=attempt + 1
                 ).warning(f"Proxy validation failed: {exc}")
 
             if attempt < max_retries - 1:
@@ -224,7 +242,7 @@ class ProxyManager:
         )
         return False
 
-    async def delete_proxy(self, proxy_id: str):
+    async def delete_proxy(self, proxy_id: str) -> None:
         """Delete a proxy from storage.
 
         Args:
@@ -235,8 +253,8 @@ class ProxyManager:
         await self.redis.delete(f"{self.proxy_block_key}{proxy_id}")
         logger.bind(proxy_id=proxy_id).info("Proxy deleted")
 
-    async def validate_all_proxies(self):
-        """Validate all proxies and unblock those that are now valid."""
+    async def validate_all_proxies(self) -> None:
+        """Validate all proxies and update their status in Redis."""
         # Get all proxy IDs from the sorted set
         sorted_ids = await self.redis.zrange(self.proxy_sorted_key, 0, -1)
 
@@ -259,25 +277,25 @@ class ProxyManager:
                 continue
             proxy_str = proxy.to_httpx_proxy()
             task = self.validate_proxy(proxy_str)
-            validation_tasks.append((proxy_id, proxy, task))
+            validation_tasks.append((proxy_id, task))
 
         # Await all validation tasks concurrently
-        results = await asyncio.gather(
-            *[task for _, _, task in validation_tasks]
-        )
+        results = await asyncio.gather(*[task for _, task in validation_tasks])
 
         # Process results
         for i, is_valid in enumerate(results):
-            proxy_id, proxy, _ = validation_tasks[i]
-            if is_valid and proxy.is_blocked:
-                # Unblock the proxy
-                proxy.is_blocked = False
-                await self.redis.set(
-                    f"{self.proxy_key}{proxy_id}", proxy.model_dump_json()
-                )
+            proxy_id = validation_tasks[i][0]
+            if is_valid:
+                # Remove block key if exists
                 await self.redis.delete(f"{self.proxy_block_key}{proxy_id}")
                 # Add back to sorted set with score 0 (least used)
                 await self.redis.zadd(self.proxy_sorted_key, {proxy_id: 0})
                 logger.bind(proxy_id=proxy_id).info(
-                    "Proxy unblocked and added back to sorted set"
+                    "Proxy validated and added back to sorted set"
+                )
+            else:
+                # Remove from sorted set (mark as inactive)
+                await self.redis.zrem(self.proxy_sorted_key, proxy_id)
+                logger.bind(proxy_id=proxy_id).warning(
+                    "Proxy validation failed, removed from sorted set"
                 )

@@ -27,8 +27,7 @@ class ProxyAddSchema(BaseModel):
 class ProxyResponseSchema(BaseModel):
     host: str = Field(description="Proxy host")
     port: int = Field(description="Proxy port")
-    is_blocked: bool = Field(description="Proxy block flag")
-    request_count: int = Field(description="Count of proxy connections")
+    is_blocked: bool = Field(description="Proxy block flag (from Redis)")
 
     class Config:
         json_schema_extra = {
@@ -36,7 +35,6 @@ class ProxyResponseSchema(BaseModel):
                 "host": "192.168.1.1",
                 "port": "64602",
                 "is_blocked": "true",
-                "request_count": "14",
             }
         }
 
@@ -54,13 +52,11 @@ class ProxyListSchema(BaseModel):
                         "host": "192.168.1.1",
                         "port": "64602",
                         "is_blocked": "true",
-                        "request_count": "14",
                     },
                     {
-                        "host": "192.192,1,1",
+                        "host": "192.192.1.1",
                         "port": "64605",
                         "is_blocked": "false",
-                        "request_count": "1",
                     },
                 ],
             }

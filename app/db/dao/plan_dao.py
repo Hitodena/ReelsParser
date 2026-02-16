@@ -13,8 +13,8 @@ class PlanDAO(BaseDAO[Plan]):
     model = Plan
 
     @classmethod
-    async def get_by_type(
-        cls, plan_type: PlanType, session: AsyncSession
+    async def get_by_active_type(
+        cls, plan_type: PlanType, session: AsyncSession, active: bool = True
     ) -> PlanModel | None:
         """
         Retrieves an active plan by its type.
@@ -26,55 +26,29 @@ class PlanDAO(BaseDAO[Plan]):
         Returns:
             PlanModel | None: The matching plan if found, otherwise None.
         """
-        logger.bind(model=cls.model, plan_type=plan_type).info(
+        logger.bind(model=cls.model, plan_type=plan_type, active=active).info(
             "Getting plan by type"
         )
         stmt = select(cls.model).where(
-            cls.model.name == plan_type, cls.model.is_active
+            cls.model.name == plan_type, cls.model.is_active == active
         )
         try:
             result = await session.execute(stmt)
             plan = result.scalar_one_or_none()
             if not plan:
-                logger.bind(model=cls.model, plan_type=plan_type).warning(
-                    "No active plan found by type"
-                )
+                logger.bind(
+                    model=cls.model, plan_type=plan_type, ctive=active
+                ).warning("No active plan found by type")
                 return None
-            logger.bind(model=cls.model, plan_type=plan_type).info(
-                "Found plan by type"
-            )
+            logger.bind(
+                model=cls.model, plan_type=plan_type, ctive=active
+            ).info("Found plan by type")
             return PlanModel.model_validate(plan)
         except Exception as exc:
             logger.bind(
-                error_message=exc, model=cls.model, plan_type=plan_type
+                error_message=exc,
+                model=cls.model,
+                plan_type=plan_type,
+                ctive=active,
             ).exception("Failed to get plan by type")
-            raise
-
-    @classmethod
-    async def get_all_active(cls, session: AsyncSession) -> list[PlanModel]:
-        """
-        Retrieves all active plans.
-
-        Args:
-            session (AsyncSession): The database session to use for the query.
-
-        Returns:
-            list[PlanModel]: A list of all active plans.
-        """
-        logger.bind(model=cls.model).info("Getting all active plans")
-        stmt = select(cls.model).where(cls.model.is_active)
-        try:
-            result = await session.execute(stmt)
-            plans = result.scalars().all()
-            if not plans:
-                logger.bind(model=cls.model).warning("No active plans found")
-                return []
-            logger.bind(model=cls.model, count=len(plans)).info(
-                "Found active plans"
-            )
-            return [PlanModel.model_validate(plan) for plan in plans]
-        except Exception as exc:
-            logger.bind(error_message=exc, model=cls.model).exception(
-                "Failed to get all active plans"
-            )
             raise
