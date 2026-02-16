@@ -8,6 +8,7 @@ class PaymentModel(BaseModel):
 
     id: int = Field(description="Unique identifier for the payment")
     tg_user_id: int = Field(description="ID of the user who made the payment")
+    plan_id: int = Field(description="ID of the plan being purchased")
     invoice_id: str = Field(description="Unique invoice identifier")
     amount: int = Field(
         description="Payment amount in cents or smallest currency unit"
@@ -27,8 +28,9 @@ class PaymentModel(BaseModel):
             "example": {
                 "id": 1,
                 "tg_user_id": 1,
+                "plan_id": 2,
                 "invoice_id": "inv_123456789",
-                "amount": 999,
+                "amount": 99000,
                 "status": "completed",
                 "created_at": "2024-01-01T00:00:00Z",
                 "updated_at": "2024-01-01T00:00:00Z",

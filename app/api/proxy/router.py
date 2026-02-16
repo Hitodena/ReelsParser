@@ -1,4 +1,5 @@
-# app/routers/proxies.py
+"""Proxy API router for managing proxy servers."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.models.proxy import ProxyModel
@@ -33,7 +34,8 @@ async def add_proxy(
     data: ProxyAddSchema,
     proxy_manager: ProxyManager = Depends(get_proxy_manager),
 ) -> ProxyAddResponseSchema:
-    """Add a new proxy to the proxy pool.
+    """
+    Add a new proxy to the proxy pool.
 
     Args:
         data: The proxy data including host, port, username, password, and protocol.
@@ -41,6 +43,23 @@ async def add_proxy(
 
     Returns:
         ProxyAddResponseSchema: Response containing the status and proxy ID.
+
+    Raises:
+        HTTPException: 500 if failed to add proxy.
+
+    Example:
+        POST /api/proxies/
+        Body: {
+            "host": "192.168.1.1",
+            "port": 8080,
+            "username": "user",
+            "password": "pass",
+            "protocol": "http"
+        }
+        Response: {
+            "status": "success",
+            "proxy_id": "abc123"
+        }
     """
     try:
         proxy = ProxyModel(
@@ -64,23 +83,48 @@ async def add_proxy(
     response_model=ProxyListSchema,
     responses={
         200: {"description": "Proxies retrieved successfully"},
+        404: {"description": "There are no proxies in pool"},
         500: {
             "description": "Internal Server Error - Failed to retrieve proxies"
         },
-        404: {"description": "There is no proxies in pool"},
     },
     status_code=status.HTTP_200_OK,
 )
 async def list_proxies(
     proxy_manager: ProxyManager = Depends(get_proxy_manager),
 ) -> ProxyListSchema:
-    """Retrieve a list of all proxies in the pool.
+    """
+    Retrieve a list of all proxies in the pool.
+
+    Returns proxy information including blocked status.
+    Blocked proxies are temporarily excluded from rotation.
 
     Args:
         proxy_manager: The proxy manager service instance.
 
     Returns:
         ProxyListSchema: Response containing the total count and list of proxies.
+
+    Raises:
+        HTTPException: 404 if no proxies exist.
+
+    Example:
+        GET /api/proxies/
+        Response: {
+            "total": 2,
+            "proxies": [
+                {
+                    "host": "192.168.1.1",
+                    "port": 8080,
+                    "is_blocked": false
+                },
+                {
+                    "host": "10.0.0.1",
+                    "port": 3128,
+                    "is_blocked": true
+                }
+            ]
+        }
     """
     proxies_with_status = await proxy_manager.get_all_with_status()
     proxy_list = [
@@ -108,9 +152,11 @@ async def list_proxies(
     status_code=status.HTTP_200_OK,
 )
 async def delete_proxy(
-    proxy_id: str, proxy_manager: ProxyManager = Depends(get_proxy_manager)
+    proxy_id: str,
+    proxy_manager: ProxyManager = Depends(get_proxy_manager),
 ) -> ProxyDeleteResponseSchema:
-    """Delete a specific proxy from the pool.
+    """
+    Delete a specific proxy from the pool.
 
     Args:
         proxy_id: The unique identifier of the proxy to delete.
@@ -118,6 +164,13 @@ async def delete_proxy(
 
     Returns:
         ProxyDeleteResponseSchema: Response containing the status of the deletion.
+
+    Raises:
+        HTTPException: 404 if proxy not found.
+
+    Example:
+        DELETE /api/proxies/abc123
+        Response: {"status": "success"}
     """
     try:
         await proxy_manager.delete_proxy(proxy_id)
@@ -140,9 +193,11 @@ async def delete_proxy(
     status_code=status.HTTP_200_OK,
 )
 async def unblock_proxy(
-    proxy_id: str, proxy_manager: ProxyManager = Depends(get_proxy_manager)
+    proxy_id: str,
+    proxy_manager: ProxyManager = Depends(get_proxy_manager),
 ) -> ProxyUnblockResponseSchema:
-    """Manually unblock a specific proxy.
+    """
+    Manually unblock a specific proxy.
 
     Args:
         proxy_id: The unique identifier of the proxy to unblock.
@@ -150,6 +205,13 @@ async def unblock_proxy(
 
     Returns:
         ProxyUnblockResponseSchema: Response containing the status of the unblock operation.
+
+    Raises:
+        HTTPException: 404 if proxy not found.
+
+    Example:
+        POST /api/proxies/abc123/unblock
+        Response: {"status": "success"}
     """
     try:
         await proxy_manager.unblock_proxy(proxy_id)
@@ -170,9 +232,11 @@ async def unblock_proxy(
     status_code=status.HTTP_200_OK,
 )
 async def block_proxy(
-    proxy_id: str, proxy_manager: ProxyManager = Depends(get_proxy_manager)
+    proxy_id: str,
+    proxy_manager: ProxyManager = Depends(get_proxy_manager),
 ) -> ProxyBlockResponseSchema:
-    """Manually block a specific proxy.
+    """
+    Manually block a specific proxy.
 
     Args:
         proxy_id: The unique identifier of the proxy to block.
@@ -180,6 +244,13 @@ async def block_proxy(
 
     Returns:
         ProxyBlockResponseSchema: Response containing the status of the block operation.
+
+    Raises:
+        HTTPException: 404 if proxy not found.
+
+    Example:
+        POST /api/proxies/abc123/block
+        Response: {"status": "success"}
     """
     try:
         await proxy_manager.block_proxy(proxy_id)

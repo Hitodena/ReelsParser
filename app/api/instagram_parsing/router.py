@@ -1,3 +1,5 @@
+"""Instagram Parsing API router for parsing reels from Instagram profiles."""
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -41,8 +43,9 @@ parsing_router = APIRouter(prefix="/instagram", tags=["Instagram"])
                 }
             },
         },
+        403: {"description": "Account is private"},
         404: {
-            "description": "No valid accounts available",
+            "description": "Account not found or no valid accounts available"
         },
         500: {"description": "Internal Server Error"},
     },
@@ -53,31 +56,47 @@ async def parse_reels_xlsx(
     db: DatabaseSessionManager = Depends(get_db),
     orchestrator: InstagramOrchestrator = Depends(get_orchestrator),
     proxy_manager: ProxyManager = Depends(get_proxy_manager),
-):
+) -> StreamingResponse:
     """
-    Parse Instagram Reels and return XLSX file.
+    Parse Instagram Reels and return as XLSX file.
 
     **Workflow:**
-    1. Retrieve account from database
-    2. Extract fresh credentials (doc_id, variables, headers)
-    3. Fetch all reels with pagination
-    4. Generate XLSX file with results
+    1. Retrieve least-used valid account from database
+    2. Get least-used proxy for request
+    3. Extract fresh credentials (doc_id, variables, headers)
+    4. Fetch all reels with pagination
+    5. Generate XLSX file with results
+    6. Update account cookies and last_used_at
 
     **XLSX Columns:**
-    - Link: Direct link to the reel
-    - Views: Number of views
-    - Likes: Number of likes
-    - Comments: Number of comments
-    - Virality: Engagement Rate (calculated as (likes + comments) / views)
+    - Ссылка: Direct link to the reel
+    - Просмотры: Number of views
+    - Лайки: Number of likes
+    - Комменты: Number of comments
+    - Вирусность: Engagement Rate = (likes + comments) / views
 
     Args:
-        data: Parsing parameters
+        data: Parsing parameters with target_username and max_reels.
+        browser: Browser manager for Playwright context.
+        db: Database session manager dependency.
+        orchestrator: Instagram orchestrator for parsing.
+        proxy_manager: Proxy manager for getting proxies.
 
     Returns:
-        StreamingResponse: XLSX file as download.
+        StreamingResponse: XLSX file as download attachment.
 
     Raises:
-        HTTPException 500: For unexpected errors.
+        HTTPException: 403 if target account is private.
+        HTTPException: 404 if account not found or no valid accounts.
+        HTTPException: 500 for parsing errors.
+
+    Example:
+        POST /api/instagram/parse/xlsx
+        Body: {
+            "target_username": "instagram",
+            "max_reels": 50
+        }
+        Response: Binary XLSX file download
     """
     import io
 
@@ -115,23 +134,25 @@ async def parse_reels_xlsx(
             )
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to use account '{account.login}' with unexpected error, account has been invalidated: {exc}.",
+            detail=f"Failed to use account '{account.login}' - account invalidated: {exc}",
         )
     except UserPrivateError:
-        raise HTTPException(status_code=403, detail="This account private")
+        raise HTTPException(
+            403, f"Account '{data.target_username}' is private"
+        )
     except UserNotFoundError:
-        raise HTTPException(status_code=404, detail="Account not found")
+        raise HTTPException(404, f"Account '{data.target_username}' not found")
     except Exception as exc:
         async with db.session() as session:
             await InstagramAccountDAO.update_by_login(
                 session, auth.login, valid=False
             )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to use account '{account.login}'. Account has been invalidated: {exc}.",
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to parse reels: {exc}",
         )
 
-    # Update cookies and last_used_at in DB
+    # Update cookies and last_used_at
     async with db.session() as session:
         await InstagramAccountDAO.update_by_login(
             session,
@@ -140,6 +161,7 @@ async def parse_reels_xlsx(
             last_used_at=datetime.now(),
         )
 
+    # Filter valid reels
     required_keys = ["url", "views", "likes", "comments", "virality"]
     reels = [
         r
@@ -148,8 +170,9 @@ async def parse_reels_xlsx(
     ]
 
     if not reels:
-        raise HTTPException(500, "Failed to get reels")
+        raise HTTPException(500, "Failed to get reels - no valid data")
 
+    # Create DataFrame with Russian column names
     df = pd.DataFrame(reels)
     df = df[required_keys].rename(
         columns={
@@ -165,6 +188,7 @@ async def parse_reels_xlsx(
     df["Комменты"] = df["Комменты"].astype(int)
     df["Вирусность"] = df["Вирусность"].astype(float)
 
+    # Generate XLSX
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Reels")

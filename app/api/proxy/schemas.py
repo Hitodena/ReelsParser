@@ -16,7 +16,7 @@ class ProxyAddSchema(BaseModel):
         json_schema_extra = {
             "example": {
                 "host": "192.168.1.1",
-                "port": "64602",
+                "port": 64602,
                 "username": "admin",
                 "password": "admin",
                 "protocol": "http",
