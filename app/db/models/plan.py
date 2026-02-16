@@ -1,13 +1,22 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.custom_enums import PlanType
 
 from .base import Base, IDMixin, TimestampMixin
 
+if TYPE_CHECKING:
+    from .tg_user import TGUser
+
 
 class Plan(IDMixin, TimestampMixin, Base):
     __tablename__ = "plans"
+
+    tg_users: Mapped[list["TGUser"]] = relationship(
+        "TGUser", back_populates="plan"
+    )
 
     name: Mapped[PlanType] = mapped_column(
         PgEnum(

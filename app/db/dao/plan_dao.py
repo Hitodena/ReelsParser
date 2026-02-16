@@ -52,3 +52,36 @@ class PlanDAO(BaseDAO[Plan]):
                 ctive=active,
             ).exception("Failed to get plan by type")
             raise
+
+    @classmethod
+    async def get_all_active(
+        cls, session: AsyncSession, active: bool = True
+    ) -> list[PlanModel]:
+        """
+        Retrieves all active plans.
+
+        Args:
+            session (AsyncSession): The database session to use for the query.
+            active (bool): Filter by active status. Defaults to True.
+
+        Returns:
+            list[PlanModel]: List of active plans.
+        """
+        logger.bind(model=cls.model, active=active).info(
+            "Getting all active plans"
+        )
+        stmt = select(cls.model).where(cls.model.is_active == active)
+        try:
+            result = await session.execute(stmt)
+            plans = result.scalars().all()
+            logger.bind(model=cls.model, active=active, count=len(plans)).info(
+                "Found active plans"
+            )
+            return [PlanModel.model_validate(plan) for plan in plans]
+        except Exception as exc:
+            logger.bind(
+                error_message=exc,
+                model=cls.model,
+                active=active,
+            ).exception("Failed to get all active plans")
+            raise

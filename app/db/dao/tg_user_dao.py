@@ -76,7 +76,7 @@ class TGUserDAO(BaseDAO[TGUser]):
     @classmethod
     async def check_limit(
         cls, tg_id: int, session: AsyncSession
-    ) -> tuple[bool, int]:
+    ) -> tuple[bool, int, int]:
         """
         Checks if the user has remaining analyses in their current billing period.
 
@@ -85,9 +85,10 @@ class TGUserDAO(BaseDAO[TGUser]):
             session (AsyncSession): The database session to use for the query.
 
         Returns:
-            tuple[bool, int]: A tuple containing:
+            tuple[bool, int, int]: A tuple containing:
                 - bool: True if the user can perform more analyses, False otherwise.
                 - int: Number of remaining analyses (-1 for unlimited).
+                - int: Maximum reels per request for the user's plan.
         """
         logger.bind(model=cls.model, telegram_id=tg_id).info(
             "Checking usage limit for user"
@@ -102,21 +103,23 @@ class TGUserDAO(BaseDAO[TGUser]):
                 logger.bind(model=cls.model, telegram_id=tg_id).warning(
                     "User not found for limit check"
                 )
-                return False, 0
+                return False, 0, 0
 
             await cls.check_and_reset_period(db_user, session)
+
+            max_reels = db_user.plan.max_reels_per_request
 
             if db_user.plan.monthly_analyses is None:  # Unlimited
                 logger.bind(model=cls.model, telegram_id=tg_id).info(
                     "User has unlimited plan"
                 )
-                return True, -1
+                return True, -1, max_reels
 
             remaining = db_user.plan.monthly_analyses - db_user.analyses_used
             logger.bind(
                 model=cls.model, telegram_id=tg_id, remaining=remaining
             ).info("Checked usage limit for user")
-            return remaining > 0, remaining
+            return remaining > 0, remaining, max_reels
         except Exception as exc:
             logger.bind(
                 error_message=exc, model=cls.model, telegram_id=tg_id
@@ -124,13 +127,16 @@ class TGUserDAO(BaseDAO[TGUser]):
             raise
 
     @classmethod
-    async def increment_usage(cls, tg_id: int, session: AsyncSession) -> None:
+    async def increment_usage(cls, tg_id: int, session: AsyncSession) -> int:
         """
         Increments the usage count for a user.
 
         Args:
             tg_id (int): The Telegram ID of the user to increment usage for.
             session (AsyncSession): The database session to use for the update.
+
+        Returns:
+            int: The new analyses_used count after increment. Returns 0 if user not found.
         """
         logger.bind(model=cls.model, telegram_id=tg_id).info(
             "Incrementing usage for user"
@@ -147,10 +153,12 @@ class TGUserDAO(BaseDAO[TGUser]):
                     telegram_id=tg_id,
                     analyses_used=user.analyses_used,
                 ).info("Incremented usage for user")
+                return user.analyses_used
             else:
                 logger.bind(model=cls.model, telegram_id=tg_id).warning(
                     "User not found for usage increment"
                 )
+                return 0
         except Exception as exc:
             logger.bind(
                 error_message=exc, model=cls.model, telegram_id=tg_id

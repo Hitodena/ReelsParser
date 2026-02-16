@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from loguru import logger
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,70 +47,6 @@ class InstagramAccountDAO(BaseDAO):
             logger.bind(
                 error_message=exc, model=cls.model, login=login
             ).exception("Failed to get account by login")
-            raise
-
-    @classmethod
-    async def update_by_login(
-        cls,
-        session: AsyncSession,
-        login: str,
-        password: str | None = None,
-        last_used_at: datetime | None = None,
-        cookies: dict | None = None,
-        valid: bool | None = None,
-    ) -> InstagramAccount | None:
-        """
-        Updates specific fields of an Instagram account by its login.
-
-        Args:
-            session (AsyncSession): The database session to use for the update.
-            login (str): The login of the Instagram account to update.
-            password (str | None): New password for the account, if provided.
-            last_used_at (datetime | None): New last used timestamp, if provided.
-            cookies (dict | None): New cookies for the account, if provided.
-            valid (bool | None): New validity status, if provided.
-
-        Returns:
-            InstagramAccount | None: The updated Instagram account if successful, otherwise None.
-        """
-        logger.bind(model=cls.model, login=login).info(
-            "Updating instagram account by login"
-        )
-        update_data = {}
-        if password:
-            update_data["password"] = password
-        if last_used_at:
-            update_data["last_used_at"] = last_used_at
-        if cookies:
-            update_data["cookies"] = cookies
-        if isinstance(valid, bool):
-            update_data["valid"] = valid
-        elif not update_data:
-            logger.bind(model=cls.model, login=login).warning(
-                "No fields to update"
-            )
-            return None
-
-        stmt = (
-            update(cls.model)
-            .where(cls.model.login == login)
-            .values(**update_data)
-        ).returning(cls.model)
-
-        try:
-            result = await session.execute(stmt)
-            await session.commit()
-            account = result.scalar_one_or_none()
-            if not account:
-                logger.bind(model=cls.model, login=login).warning(
-                    "No account updated by login"
-                )
-                return None
-            return account
-        except Exception as exc:
-            logger.bind(
-                error_message=exc, model=cls.model, login=login
-            ).exception("Failed to update account by login")
             raise
 
     @classmethod
@@ -243,4 +177,71 @@ class InstagramAccountDAO(BaseDAO):
             logger.bind(error_message=exc, model=cls.model).exception(
                 "Failed to get least recently used account"
             )
+            raise
+
+    @classmethod
+    async def update_by_login(
+        cls,
+        session: AsyncSession,
+        login: str,
+        cookies: dict | None = None,
+        last_used_at: object | None = None,
+        valid: bool | None = None,
+    ) -> InstagramAccount | None:
+        """
+        Updates an Instagram account by its login.
+
+        Args:
+            session (AsyncSession): The database session to use for the update.
+            login (str): The login of the Instagram account to update.
+            cookies (dict | None): New cookies to set.
+            last_used_at (object | None): New last_used_at timestamp.
+            valid (bool | None): New validity status.
+
+        Returns:
+            InstagramAccount | None: The updated Instagram account if successful, otherwise None.
+        """
+        logger.bind(
+            model=cls.model,
+            login=login,
+            cookies=cookies is not None,
+            last_used_at=last_used_at,
+            valid=valid,
+        ).info("Updating instagram account by login")
+
+        values = {}
+        if cookies is not None:
+            values["cookies"] = cookies
+        if last_used_at is not None:
+            values["last_used_at"] = last_used_at
+        if valid is not None:
+            values["valid"] = valid
+
+        if not values:
+            logger.bind(model=cls.model, login=login).warning(
+                "No values to update"
+            )
+            return None
+
+        stmt = (
+            update(cls.model).where(cls.model.login == login).values(**values)
+        ).returning(cls.model)
+
+        try:
+            result = await session.execute(stmt)
+            await session.commit()
+            account = result.scalar_one_or_none()
+            if not account:
+                logger.bind(model=cls.model, login=login).warning(
+                    "No account found to update"
+                )
+                return None
+            logger.bind(model=cls.model, login=login).info(
+                "Updated instagram account by login"
+            )
+            return account
+        except Exception as exc:
+            logger.bind(
+                error_message=exc, model=cls.model, login=login
+            ).exception("Failed to update account by login")
             raise

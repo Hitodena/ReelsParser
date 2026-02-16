@@ -47,5 +47,16 @@ class EnvironmentSettings(BaseSettings):
         "{message} | {extra}"
     )
 
+    # Robokassa payment settings
+    robokassa_login: str = Field(
+        default="", description="Robokassa merchant login"
+    )
+    robokassa_password1: str = Field(
+        default="", description="Robokassa password 1 for payment links"
+    )
+    robokassa_password2: str = Field(
+        default="", description="Robokassa password 2 for result verification"
+    )
+
     def get_db_url(self) -> str:
         return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
