@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.keyboards import get_cancel_keyboard
 from bot.states import ParseStates
-from bot.utils import get_limit, parse_instagram_reels
+from bot.utils import get_limit, increment_usage, parse_instagram_reels
 
 
 async def parse_command(message: Message, state: FSMContext):
@@ -22,12 +22,15 @@ async def parse_command(message: Message, state: FSMContext):
 
 async def username_input(message: Message, state: FSMContext):
     """Handle username input."""
-    username = message.text.strip()  # type: ignore
+    username = message.text.strip()  # pyright: ignore[reportOptionalMemberAccess]
 
-    limit = await get_limit(message.from_user.id)  # type: ignore
+    limit = await get_limit(message.from_user.id)  # pyright: ignore[reportOptionalMemberAccess]
     if not limit["can_parse"]:
-        await message.answer("Вы исчерпали лимит парсинга.")
+        await message.answer(
+            f"Вы исчерпали лимит парсинга. Осталось: {limit['remaining']}"
+        )
         await state.clear()
+        return
 
     # Validate username
     if not re.match(r"^[a-zA-Z0-9_.]+$", username):
@@ -51,6 +54,9 @@ async def username_input(message: Message, state: FSMContext):
             filename=f"{username}_reels.xlsx",
             caption="Парсинг завершен! Вот ваш файл с reels.",
         )
+
+        # Increment usage
+        await increment_usage(message.from_user.id)  # pyright: ignore[reportOptionalMemberAccess]
 
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 403:

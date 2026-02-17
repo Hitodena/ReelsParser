@@ -36,7 +36,7 @@ async def get_plans() -> list[dict[str, str | int]]:
         response = await client.get(url, timeout=15)
         response.raise_for_status()
 
-    return response.json()
+    return response.json()["plans"]
 
 
 async def create_payment(tg_id: int, plan_type: str) -> dict[str, str]:
@@ -53,10 +53,22 @@ async def create_payment(tg_id: int, plan_type: str) -> dict[str, str]:
 
 
 async def get_limit(tg_id: int) -> dict[str, bool | int]:
+    """Call API to get user limit"""
     url = f"{config.environment.api_base_url}/users/{tg_id}/limit"
 
     async with httpx.AsyncClient() as client:
         response = await client.get(url, timeout=15)
+        response.raise_for_status()
+
+    return response.json()
+
+
+async def increment_usage(tg_id: int) -> dict[str, bool | int]:
+    """Call API to increment user requests"""
+    url = f"{config.environment.api_base_url}/users/{tg_id}/increment"
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, timeout=15)
         response.raise_for_status()
 
     return response.json()
