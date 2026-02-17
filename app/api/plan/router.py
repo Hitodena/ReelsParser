@@ -76,7 +76,7 @@ async def create_plan(
     Create a new subscription plan.
 
     Args:
-        data: Plan creation data with name, price, limits.
+        data: Plan creation data with name, price_rub, limits.
         db: Database session manager dependency.
 
     Returns:
@@ -89,7 +89,7 @@ async def create_plan(
         POST /api/plans
         Body: {
             "name": "Base",
-            "price": 99000,
+            "price_rub": 990.0,
             "monthly_analyses": 100,
             "max_reels_per_request": 10,
             "is_active": true
@@ -115,11 +115,14 @@ async def create_plan(
                 detail=f"Plan '{data.name}' already exists",
             )
 
+        # Convert price_rub to kopecks (cents)
+        price_kopecks = int(data.price_rub * 100)
+
         # Create new plan
         plan = await PlanDAO.add(
             session,
             name=data.name,
-            price=data.price,
+            price=price_kopecks,
             monthly_analyses=data.monthly_analyses,
             max_reels_per_request=data.max_reels_per_request,
             is_active=data.is_active,
@@ -164,7 +167,7 @@ async def update_plan(
     Example:
         PATCH /api/plans/2
         Body: {
-            "price": 149000,
+            "price_rub": 1490.0,
             "monthly_analyses": 150
         }
         Response: {
@@ -190,6 +193,11 @@ async def update_plan(
 
         # Update only provided fields
         update_data = data.model_dump(exclude_unset=True)
+
+        # Convert price_rub to kopecks if provided
+        if "price_rub" in update_data:
+            update_data["price"] = int(update_data.pop("price_rub") * 100)
+
         for field, value in update_data.items():
             setattr(plan, field, value)
 

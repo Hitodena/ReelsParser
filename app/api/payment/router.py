@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_robokassa
 from app.db.dao import PaymentDAO, PlanDAO, TGUserDAO
 from app.services import DatabaseSessionManager, RobokassaService
 
@@ -15,11 +15,6 @@ from .schemas import (
 )
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
-
-
-def get_robokassa() -> RobokassaService:
-    """Dependency for RobokassaService."""
-    return RobokassaService()
 
 
 @payment_router.post(

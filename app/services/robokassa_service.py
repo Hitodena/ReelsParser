@@ -1,4 +1,5 @@
 import hashlib
+from urllib import parse
 
 from app.core import load
 
@@ -16,6 +17,8 @@ class RobokassaService:
         self.login = config.environment.robokassa_login
         self.password1 = config.environment.robokassa_password1
         self.password2 = config.environment.robokassa_password2
+        self.payment_url = config.environment.robokassa_payment_url
+        self.is_test = 1 if config.environment.debug else 0
 
     def generate_payment_link(
         self,
@@ -38,19 +41,20 @@ class RobokassaService:
             >>> service = RobokassaService()
             >>> url = service.generate_payment_link("INV_123", 990.00, "Base plan")
         """
-        # Generate MD5 signature: MerchantLogin:OutSum:InvoiceID:Password1
+        # Generate MD5 signature: MerchantLogin:OutSum:InvId:Password1
         signature = hashlib.md5(
             f"{self.login}:{amount:.2f}:{invoice_id}:{self.password1}".encode()
         ).hexdigest()
 
-        return (
-            f"https://auth.robokassa.ru/Merchant/Index.aspx?"
-            f"MerchantLogin={self.login}&"
-            f"OutSum={amount:.2f}&"
-            f"InvoiceID={invoice_id}&"
-            f"Description={description}&"
-            f"SignatureValue={signature}"
-        )
+        data = {
+            "MerchantLogin": self.login,
+            "OutSum": amount,
+            "InvId": invoice_id,
+            "Description": description,
+            "SignatureValue": signature,
+            "IsTest": self.is_test,
+        }
+        return f"{self.payment_url}?{parse.urlencode(data)}"
 
     def verify_result(
         self,

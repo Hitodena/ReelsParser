@@ -8,8 +8,8 @@ class CreatePlanRequestSchema(BaseModel):
     """Schema for creating a new plan."""
 
     name: PlanType = Field(description="Plan type (Test, Base, Unlimited)")
-    price: int = Field(
-        description="Price in cents/kopecks (e.g., 99000 = 990₽)"
+    price_rub: float = Field(
+        description="Price in rubles (e.g., 990.0 = 990₽)"
     )
     monthly_analyses: int | None = Field(
         default=None,
@@ -24,7 +24,7 @@ class CreatePlanRequestSchema(BaseModel):
         "json_schema_extra": {
             "example": {
                 "name": "Base",
-                "price": 99000,
+                "price_rub": 990.0,
                 "monthly_analyses": 100,
                 "max_reels_per_request": 10,
                 "is_active": True,
@@ -37,8 +37,8 @@ class UpdatePlanRequestSchema(BaseModel):
     """Schema for updating a plan. All fields are optional."""
 
     name: PlanType | None = Field(default=None, description="Plan type")
-    price: int | None = Field(
-        default=None, description="Price in cents/kopecks"
+    price_rub: float | None = Field(
+        default=None, description="Price in rubles"
     )
     monthly_analyses: int | None = Field(
         default=None, description="Monthly analyses limit. None = Unlimited"
@@ -53,7 +53,7 @@ class UpdatePlanRequestSchema(BaseModel):
     model_config = {
         "json_schema_extra": {
             "example": {
-                "price": 149000,
+                "price_rub": 1490.0,
                 "monthly_analyses": 150,
                 "max_reels_per_request": 100,
                 "is_active": True,

@@ -9,6 +9,7 @@ from app.services import (
     DatabaseSessionManager,
     InstagramOrchestrator,
     ProxyManager,
+    RobokassaService,
 )
 
 
@@ -35,6 +36,11 @@ def get_proxy_manager(request: Request) -> ProxyManager:
 def get_parser_orchestrator(request: Request) -> InstagramOrchestrator:
     """Get parser orchestrator from app state"""
     return request.app.state.parser_orchestrator
+
+
+def get_robokassa() -> RobokassaService:
+    """Get Robokassa service"""
+    return RobokassaService()
 
 
 @asynccontextmanager
