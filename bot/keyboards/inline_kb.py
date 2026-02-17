@@ -19,3 +19,20 @@ def get_cancel_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="Отмена", callback_data="cancel")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def get_plans_keyboard(
+    plans: list[dict[str, str | int]],
+) -> InlineKeyboardMarkup:
+    """Keyboard with tarrifs"""
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                text=f"{plan['name']} - {plan['price_rub']}RUB",
+                callback_data=f"plan_{plan['id']}",
+            )
+        ]
+        for plan in plans
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

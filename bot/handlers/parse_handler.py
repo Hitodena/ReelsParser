@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.keyboards import get_cancel_keyboard
 from bot.states import ParseStates
-from bot.utils import parse_instagram_reels
+from bot.utils import get_limit, parse_instagram_reels
 
 
 async def parse_command(message: Message, state: FSMContext):
@@ -24,6 +24,11 @@ async def username_input(message: Message, state: FSMContext):
     """Handle username input."""
     username = message.text.strip()  # type: ignore
 
+    limit = await get_limit(message.from_user.id)  # type: ignore
+    if not limit["can_parse"]:
+        await message.answer("Вы исчерпали лимит парсинга.")
+        await state.clear()
+
     # Validate username
     if not re.match(r"^[a-zA-Z0-9_.]+$", username):
         await message.answer(
@@ -33,38 +38,12 @@ async def username_input(message: Message, state: FSMContext):
         return
 
     await state.update_data(username=username)
-    await state.set_state(ParseStates.max_reels)
-    await message.answer(
-        "Введите максимальное количество reels для парсинга (число от 1 до 1000, или 0 для всех):",
-        reply_markup=get_cancel_keyboard(),
-    )
-
-
-async def max_reels_input(message: Message, state: FSMContext):
-    """Handle max_reels input."""
-    text = message.text.strip()  # type: ignore
-
-    if text.lower() == "0":
-        max_reels = None
-    else:
-        try:
-            max_reels = int(text)
-            if max_reels < 1 or max_reels > 1000:
-                raise ValueError
-        except ValueError:
-            await message.answer(
-                "Некорректное значение. Введите число от 1 до 1000, или 0 для всех.",
-                reply_markup=get_cancel_keyboard(),
-            )
-            return
-
-    data = await state.get_data()
-    username = data["username"]
-
     await message.answer("Начинаю парсинг... Пожалуйста, подождите.")
 
     try:
-        file_content = await parse_instagram_reels(username, max_reels)
+        file_content = await parse_instagram_reels(
+            username, limit["max_reels"]
+        )
 
         # Send file
         await message.answer_document(
@@ -98,8 +77,6 @@ async def max_reels_input(message: Message, state: FSMContext):
             "Произошла ошибка при парсинге. \nПопробуйте еще раз с командой /parse."
         )
 
-    await state.clear()
-
 
 async def start_parse_callback(callback: CallbackQuery, state: FSMContext):
     """Handle callback for starting parsing."""
@@ -126,7 +103,6 @@ def register(dp: Dispatcher):
     """Register handlers."""
     dp.message.register(parse_command, Command("parse"))
     dp.message.register(username_input, ParseStates.username)
-    dp.message.register(max_reels_input, ParseStates.max_reels)
     dp.message.register(cancel_text, F.text.lower() == "cancel")
     dp.callback_query.register(start_parse_callback, F.data == "start_parse")
     dp.callback_query.register(cancel_callback, F.data == "cancel")
