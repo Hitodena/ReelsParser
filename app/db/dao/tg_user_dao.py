@@ -4,7 +4,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import TGUserModel
+from app.custom_enums import PlanType
+from app.models import ProfileModel, TGUserModel
 
 from ..models import TGUser
 from .base_dao import BaseDAO
@@ -209,4 +210,61 @@ class TGUserDAO(BaseDAO[TGUser]):
                 telegram_id=tg_id,
                 new_plan_id=new_plan_id,
             ).exception("Failed to upgrade plan")
+            raise
+
+    @classmethod
+    async def get_profile(
+        cls, tg_id: int, session: AsyncSession
+    ) -> ProfileModel | None:
+        """
+        Get user profile with plan and usage information.
+
+        Args:
+            tg_id (int): The Telegram ID of the user.
+            session (AsyncSession): The database session.
+
+        Returns:
+            ProfileModel | None: Profile data if user found, otherwise None.
+        """
+        logger.bind(model=cls.model, telegram_id=tg_id).info(
+            "Getting profile for user"
+        )
+        try:
+            stmt = select(cls.model).where(cls.model.telegram_id == tg_id)
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+
+            if not user:
+                logger.bind(model=cls.model, telegram_id=tg_id).warning(
+                    "User not found for profile"
+                )
+                return None
+
+            # Check and reset period if needed
+            await cls.check_and_reset_period(user, session)
+            await session.flush()
+
+            plan = user.plan
+            has_paid_plan = plan.name != PlanType.TEST
+
+            # Calculate remaining
+            if plan.monthly_analyses is None:
+                remaining = -1  # Unlimited
+            else:
+                remaining = plan.monthly_analyses - user.analyses_used
+
+            return ProfileModel(
+                plan_name=plan.name.value,
+                analyses_used=user.analyses_used,
+                monthly_analyses=plan.monthly_analyses,
+                remaining=remaining,
+                max_reels_per_request=plan.max_reels_per_request,
+                period_start=user.period_start,
+                period_end=user.period_end,
+                has_paid_plan=has_paid_plan,
+            )
+        except Exception as exc:
+            logger.bind(
+                error_message=exc, model=cls.model, telegram_id=tg_id
+            ).exception("Failed to get profile")
             raise

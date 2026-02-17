@@ -1,6 +1,12 @@
 from aiogram import Dispatcher
 
-from . import parse_handler, pay_handler, plan_handler, start_handler
+from . import (
+    parse_handler,
+    pay_handler,
+    plan_handler,
+    profile_handler,
+    start_handler,
+)
 
 
 def register_handlers(dp: Dispatcher):
@@ -9,3 +15,4 @@ def register_handlers(dp: Dispatcher):
     parse_handler.register(dp)
     plan_handler.register(dp)
     pay_handler.register(dp)
+    profile_handler.register(dp)

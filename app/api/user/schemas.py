@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.models import TGUserModel
+from app.models import ProfileModel, TGUserModel
 
 
 class LimitResponseSchema(BaseModel):
@@ -70,3 +70,7 @@ class RegisterTGUserSchema(BaseModel):
             }
         }
     }
+
+
+class ProfileResponseSchema(ProfileModel):
+    """Schema for user profile response."""

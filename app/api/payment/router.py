@@ -4,9 +4,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse
+from sqlalchemy import select
 
 from app.api.deps import get_db, get_robokassa
+from app.custom_enums import PlanType
 from app.db.dao import PaymentDAO, PlanDAO, TGUserDAO
+from app.db.models import TGUser
 from app.services import DatabaseSessionManager, RobokassaService
 
 from .schemas import (
@@ -74,12 +77,30 @@ async def create_payment(
                 detail=f"Plan '{data.plan_type}' not found or inactive",
             )
 
-        # Get user
-        user = await TGUserDAO.get_by_telegram_id(data.tg_id, session)
+        # Get user with plan (need SQLAlchemy model for relationship)
+        stmt = select(TGUser).where(TGUser.telegram_id == data.tg_id)
+        result = await session.execute(stmt)
+        user = result.scalar_one_or_none()
+
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
+            )
+
+        # Check if user already has a paid plan
+        current_plan = user.plan
+        if current_plan.name != PlanType.TEST:
+            # User already has a paid plan
+            period_end_str = (
+                user.period_end.strftime("%d.%m.%Y")
+                if user.period_end
+                else "N/A"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"У вас уже активен тариф '{current_plan.name.value}'. "
+                f"Период действия до {period_end_str}",
             )
 
         # Generate invoice ID

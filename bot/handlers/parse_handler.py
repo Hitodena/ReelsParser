@@ -1,11 +1,16 @@
 import re
 
-import httpx
 from aiogram import Dispatcher, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from bot.exceptions import (
+    NoAccountsForParsingError,
+    PrivateAccountError,
+    UnexpectedError,
+    UserNotFoundError,
+)
 from bot.keyboards import get_cancel_keyboard
 from bot.states import ParseStates
 from bot.utils import get_limit, increment_usage, parse_instagram_reels
@@ -24,7 +29,14 @@ async def username_input(message: Message, state: FSMContext):
     """Handle username input."""
     username = message.text.strip()  # pyright: ignore[reportOptionalMemberAccess]
 
-    limit = await get_limit(message.from_user.id)  # pyright: ignore[reportOptionalMemberAccess]
+    # Check user limit
+    try:
+        limit = await get_limit(message.from_user.id)  # pyright: ignore[reportOptionalMemberAccess]
+    except UserNotFoundError as exc:
+        await message.answer(exc.message)
+        await state.clear()
+        return
+
     if not limit["can_parse"]:
         await message.answer(
             f"Вы исчерпали лимит парсинга. Осталось: {limit['remaining']}"
@@ -55,33 +67,21 @@ async def username_input(message: Message, state: FSMContext):
             caption="Парсинг завершен! Вот ваш файл с reels.",
         )
 
-        # Increment usage
+        # Increment usage only on success
         await increment_usage(message.from_user.id)  # pyright: ignore[reportOptionalMemberAccess]
 
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 403:
-            await message.answer(
-                "Данный аккаунт приватный\nПопробуйте еще раз с командой /parse."
-            )
-        elif exc.response.status_code == 404:
-            if "No valid Instagram accounts available" in str(
-                exc.response.text
-            ):
-                await message.answer(
-                    "Нет аккаунтов для парсинга. Попросите админа добавить аккаунт."
-                )
-            else:
-                await message.answer(
-                    "Данный юзернейм не найден\nПопробуйте еще раз с командой /parse."
-                )
-        else:
-            await message.answer(
-                "Произошла ошибка при парсинге. \nПопробуйте еще раз с командой /parse."
-            )
+    except PrivateAccountError as exc:
+        await message.answer(exc.message)
+    except NoAccountsForParsingError as exc:
+        await message.answer(exc.message)
+    except UnexpectedError as exc:
+        await message.answer(exc.message)
     except Exception:
         await message.answer(
-            "Произошла ошибка при парсинге. \nПопробуйте еще раз с командой /parse."
+            "Произошла ошибка при парсинге. Попробуйте /parse снова."
         )
+
+    await state.clear()
 
 
 async def start_parse_callback(callback: CallbackQuery, state: FSMContext):

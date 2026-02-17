@@ -2,6 +2,8 @@ import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.types import BotCommand, MenuButtonCommands
 from redis.asyncio import Redis
@@ -9,6 +11,7 @@ from redis.asyncio import Redis
 from app.core import load
 from bot.core import BotSettings
 from bot.handlers import register_handlers
+from bot.middlewares import AuthMiddleware
 
 
 async def main():
@@ -28,17 +31,21 @@ async def main():
 
     # Initialize bot and dispatcher
     bot = Bot(token=bot_settings.bot_token)
-    dp = Dispatcher(storage=storage)
+    dp = Dispatcher(
+        storage=storage,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    dp.update.outer_middleware(AuthMiddleware())
 
     # Register handlers
     register_handlers(dp)
 
     # Set bot commands
     commands = [
-        BotCommand(command="start", description="Start the bot"),
-        BotCommand(
-            command="parse", description="Start parsing Instagram reels"
-        ),
+        BotCommand(command="start", description="Регистрация в боте"),
+        BotCommand(command="parse", description="Парсинг Instagram reels"),
+        BotCommand(command="plans", description="Просмотр тарифов"),
+        BotCommand(command="profile", description="Ваш профиль и тариф"),
     ]
     await bot.set_my_commands(commands)
 

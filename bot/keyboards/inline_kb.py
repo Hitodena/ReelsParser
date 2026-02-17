@@ -34,5 +34,6 @@ def get_plans_keyboard(
             )
         ]
         for plan in plans
+        if plan["name"] != "Test"
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)

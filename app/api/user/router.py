@@ -11,6 +11,7 @@ from app.services import DatabaseSessionManager
 from .schemas import (
     IncrementResponseSchema,
     LimitResponseSchema,
+    ProfileResponseSchema,
     RegisterTGUserSchema,
 )
 
@@ -197,3 +198,44 @@ async def register_user(
             status="created",
             user=TGUserModel.model_validate(new_user),
         )
+
+
+@user_router.get(
+    "/{tg_id}/profile",
+    response_model=ProfileResponseSchema,
+    status_code=status.HTTP_200_OK,
+    summary="Get user profile",
+    description="Get user's current plan, usage, and billing period information.",
+    responses={
+        200: {"description": "Profile information retrieved"},
+        404: {"description": "User not found"},
+        500: {"description": "Internal Server Error"},
+    },
+)
+async def get_profile(
+    tg_id: int,
+    db: DatabaseSessionManager = Depends(get_db),
+) -> ProfileResponseSchema:
+    """
+    Get user profile with plan and usage information.
+
+    Args:
+        tg_id (int): Telegram user ID.
+        db: Database session manager dependency.
+
+    Returns:
+        ProfileResponseSchema: User profile with plan details.
+
+    Raises:
+        HTTPException: 404 if user not found.
+    """
+    async with db.session() as session:
+        profile = await TGUserDAO.get_profile(tg_id, session)
+
+        if not profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        return ProfileResponseSchema.model_validate(profile)

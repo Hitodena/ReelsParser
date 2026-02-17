@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from loguru import logger
 from playwright.async_api import BrowserContext, Page
 
@@ -60,11 +62,15 @@ class InstagramOrchestrator:
             logger.bind(error_message=exc, login=auth.login).error(
                 "Invalid credentials"
             )
+            time = datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
+            await page.screenshot(path=f"/logs/auth_error_{time}")
             raise
         except AuthUnexpectedError as exc:
             logger.bind(error_message=exc, login=auth.login).error(
                 "Unexpected error during extraction"
             )
+            time = datetime.now().strftime("%d_%m_%Y_%H:%M:%S")
+            await page.screenshot(path=f"/logs/unexpected_error_{time}")
             raise
         except Exception as exc:
             logger.bind(error_message=exc, login=auth.login).exception(
