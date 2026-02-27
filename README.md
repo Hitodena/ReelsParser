@@ -72,11 +72,10 @@ The project is organized as follows:
    uv run playwright install-deps chromium
    ```
 
-4. Set up PostgreSQL and Redis locally, or use Docker for these services:
+4. Set up PostgreSQL and Redis locally using Docker Compose:
 
    ```bash
-   docker run -d --name postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=instagram_parser -p 5432:5432 postgres:18
-   docker run -d --name redis -p 6379:6379 redis:8
+   docker compose up -d db redis
    ```
 
 5. Create a `.env` file with the required environment variables.
