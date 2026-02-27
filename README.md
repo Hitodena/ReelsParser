@@ -42,12 +42,13 @@ The project is organized as follows:
 3. Run the following command to start all services:
 
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
    This will start the following services:
    - PostgreSQL database on port 5432
    - Redis on port 6379
+   - Migration service (runs database migrations)
    - API service on port 8000
    - Telegram bot
 
