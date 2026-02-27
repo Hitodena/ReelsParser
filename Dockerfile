@@ -23,6 +23,7 @@ RUN chown -R docker_user:docker_user /app
 USER docker_user
 
 # Copy dependency files
+
 COPY --chown=docker_user:docker_user pyproject.toml uv.lock ./
 
 # Install dependencies
@@ -40,11 +41,14 @@ RUN uv run playwright install-deps chromium
 # Switch back to user
 USER docker_user
 
+COPY --chown=docker_user:docker_user app ./app
+COPY --chown=docker_user:docker_user alembic.ini .
+COPY --chown=docker_user:docker_user alembic ./alembic
+
 # Install playwright browser
 RUN uv run playwright install chromium
 
 # Copy application code
-COPY --chown=docker_user:docker_user app ./app
 
 # Expose port
 EXPOSE 8000

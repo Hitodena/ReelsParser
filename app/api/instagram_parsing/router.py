@@ -20,7 +20,7 @@ from app.services import (
     ProxyManager,
 )
 
-from ..deps import get_browser, get_db, get_orchestrator, get_proxy_manager
+from app.api.deps import get_browser, get_db, get_orchestrator, get_proxy_manager
 from .schemas import ParseReelsSchema
 
 parsing_router = APIRouter(prefix="/instagram", tags=["Instagram"])

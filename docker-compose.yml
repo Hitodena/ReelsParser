@@ -45,8 +45,13 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
     env_file:
       - .env
     networks:
@@ -70,6 +75,20 @@ services:
       - .env
     networks:
       - inst_parser_network
+
+  migrate:
+    container_name: inst_parser_migrate
+    build:
+      context: .
+      target: api
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - inst_parser_network
+    command: ["sh", "-c", "uv run alembic upgrade head && uv run -m app.scripts"]
 
 volumes:
   pgdata:
