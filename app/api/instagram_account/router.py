@@ -1,7 +1,17 @@
 """Instagram Account API router for managing Instagram accounts."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from pathlib import Path
+from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
+
+from app.api.deps import (
+    get_browser,
+    get_db,
+    get_orchestrator,
+    get_proxy_manager,
+)
 from app.db.dao import InstagramAccountDAO
 from app.exceptions import AuthCredentialsError, AuthUnexpectedError
 from app.services import (
@@ -11,7 +21,6 @@ from app.services import (
     ProxyManager,
 )
 
-from app.api.deps import get_browser, get_db, get_orchestrator, get_proxy_manager
 from .schemas import (
     AddAccountSchema,
     DeleteAccountResponse,
@@ -21,6 +30,32 @@ from .schemas import (
 )
 
 account_router = APIRouter(prefix="/accounts", tags=["Instagram Accounts"])
+
+
+def get_latest_screenshot() -> dict[str, Any] | None:
+    """Get the latest screenshot file info.
+
+    Returns:
+        dict with filename and base64 content, or None if no screenshot exists
+    """
+    logs_dir = Path("./logs")
+    if not logs_dir.exists():
+        return None
+
+    screenshots = list(logs_dir.glob("auth_error_*.png"))
+    if not screenshots:
+        return None
+
+    latest = max(screenshots, key=lambda p: p.stat().st_mtime)
+    try:
+        import base64
+
+        return {
+            "filename": latest.name,
+            "data": base64.b64encode(latest.read_bytes()).decode("utf-8"),
+        }
+    except Exception:
+        return None
 
 
 @account_router.get(
@@ -215,15 +250,42 @@ async def add_account(
     except HTTPException:
         raise
     except AuthCredentialsError as exc:
+        screenshot = get_latest_screenshot()
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add '{data.login}' - invalid credentials: {exc}",
+            detail={
+                "message": f"Failed to add '{data.login}' - invalid credentials: {exc}",
+                "screenshot": screenshot,
+            },
         )
     except AuthUnexpectedError as exc:
+        screenshot = get_latest_screenshot()
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add '{data.login}' - unexpected error: {exc}",
+            detail={
+                "message": f"Failed to add '{data.login}' - unexpected error: {exc}",
+                "screenshot": screenshot,
+            },
         )
+
+
+@account_router.get(
+    "/screenshots/latest",
+    summary="Get latest auth screenshot",
+    description="Download the latest authentication error screenshot.",
+)
+async def get_latest_screenshot_endpoint():
+    """Get the latest screenshot file for debugging login issues."""
+    logs_dir = Path("./logs")
+    if not logs_dir.exists():
+        raise HTTPException(404, "No screenshot found")
+
+    screenshots = list(logs_dir.glob("auth_error_*.png"))
+    if not screenshots:
+        raise HTTPException(404, "No screenshot found")
+
+    latest = max(screenshots, key=lambda p: p.stat().st_mtime)
+    return FileResponse(latest, media_type="image/png", filename=latest.name)
 
 
 @account_router.delete(
