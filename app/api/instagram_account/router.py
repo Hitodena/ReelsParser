@@ -250,21 +250,17 @@ async def add_account(
     except HTTPException:
         raise
     except AuthCredentialsError as exc:
-        screenshot = get_latest_screenshot()
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "message": f"Failed to add '{data.login}' - invalid credentials: {exc}",
-                "screenshot": screenshot,
             },
         )
     except AuthUnexpectedError as exc:
-        screenshot = get_latest_screenshot()
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={
                 "message": f"Failed to add '{data.login}' - unexpected error: {exc}",
-                "screenshot": screenshot,
             },
         )
 
