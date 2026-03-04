@@ -127,7 +127,7 @@ class Identifiers(BaseModel):
         description="Selector for password on new page",
     )
     new_field_login_selector: str = Field(
-        default="Log in",
+        default="Log In",
         description="Selector for log in on old page",
     )
     error_texts: list[str] = Field(
