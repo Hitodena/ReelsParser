@@ -32,13 +32,32 @@ from .schemas import (
 account_router = APIRouter(prefix="/accounts", tags=["Instagram Accounts"])
 
 
+@account_router.get(
+    "/screenshots/latest",
+    summary="Get latest auth screenshot",
+    description="Download the latest authentication error screenshot.",
+)
+async def get_latest_screenshot_endpoint():
+    """Get the latest screenshot file for debugging login issues."""
+    logs_dir = Path("/logs")
+    if not logs_dir.exists():
+        raise HTTPException(404, "No screenshot found")
+
+    screenshots = list(logs_dir.glob("auth_error_*.png"))
+    if not screenshots:
+        raise HTTPException(404, "No screenshot found")
+
+    latest = max(screenshots, key=lambda p: p.stat().st_mtime)
+    return FileResponse(latest, media_type="image/png", filename=latest.name)
+
+
 def get_latest_screenshot() -> dict[str, Any] | None:
     """Get the latest screenshot file info.
 
     Returns:
         dict with filename and base64 content, or None if no screenshot exists
     """
-    logs_dir = Path("./logs")
+    logs_dir = Path("/logs")
     if not logs_dir.exists():
         return None
 
@@ -263,25 +282,6 @@ async def add_account(
                 "message": f"Failed to add '{data.login}' - unexpected error: {exc}",
             },
         )
-
-
-@account_router.get(
-    "/screenshots/latest",
-    summary="Get latest auth screenshot",
-    description="Download the latest authentication error screenshot.",
-)
-async def get_latest_screenshot_endpoint():
-    """Get the latest screenshot file for debugging login issues."""
-    logs_dir = Path("./logs")
-    if not logs_dir.exists():
-        raise HTTPException(404, "No screenshot found")
-
-    screenshots = list(logs_dir.glob("auth_error_*.png"))
-    if not screenshots:
-        raise HTTPException(404, "No screenshot found")
-
-    latest = max(screenshots, key=lambda p: p.stat().st_mtime)
-    return FileResponse(latest, media_type="image/png", filename=latest.name)
 
 
 @account_router.delete(

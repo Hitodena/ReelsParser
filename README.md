@@ -400,6 +400,28 @@ Deletes a specific Instagram account.
 }
 ```
 
+#### GET /accounts/screenshots/latest
+
+Downloads the latest authentication error screenshot for debugging login issues.
+
+**Method:** GET
+
+**Response:**
+
+- Status 200: PNG image file
+- Status 404: No screenshot found
+
+**Response Headers:**
+
+- Content-Type: `image/png`
+- Content-Disposition: `attachment; filename=auth_error_*.png`
+
+**Example Request (cURL):**
+
+```bash
+curl -X GET "http://localhost:8000/accounts/screenshots/latest" -o screenshot.png
+```
+
 ### Proxy Management
 
 #### GET /proxies
