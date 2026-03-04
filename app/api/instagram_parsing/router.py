@@ -6,6 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from openpyxl.utils import get_column_letter
 
+from app.api.deps import (
+    get_browser,
+    get_db,
+    get_orchestrator,
+    get_proxy_manager,
+)
 from app.db.dao import InstagramAccountDAO
 from app.exceptions import (
     AuthUnexpectedError,
@@ -20,7 +26,6 @@ from app.services import (
     ProxyManager,
 )
 
-from app.api.deps import get_browser, get_db, get_orchestrator, get_proxy_manager
 from .schemas import ParseReelsSchema
 
 parsing_router = APIRouter(prefix="/instagram", tags=["Instagram"])
@@ -226,10 +231,10 @@ async def parse_reels_xlsx(
                 get_column_letter(col_num)
             ].width = adjusted_width
 
-        # Number format for virality (percentage)
+        # Number format for virality (decimal, not percentage)
         for row_num in range(2, len(df) + 2):
             cell = worksheet.cell(row=row_num, column=5)
-            cell.number_format = "0.00%"
+            cell.number_format = "0.000"
 
         # Freeze header row
         worksheet.freeze_panes = "A2"

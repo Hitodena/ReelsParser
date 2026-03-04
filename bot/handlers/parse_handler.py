@@ -70,6 +70,13 @@ async def username_input(message: Message, state: FSMContext):
         # Increment usage only on success
         await increment_usage(message.from_user.id)  # pyright: ignore[reportOptionalMemberAccess]
 
+        # Ask for username again (stay in the same state)
+        await message.answer(
+            "Введите username следующего Instagram аккаунта:",
+            reply_markup=get_cancel_keyboard(),
+        )
+        return
+
     except PrivateAccountError as exc:
         await message.answer(exc.message)
     except NoAccountsForParsingError as exc:
