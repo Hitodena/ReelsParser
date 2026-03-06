@@ -123,10 +123,10 @@ The following environment variables are used in the project:
 
 | Variable | Description |
 | -------- | ----------- |
-| `ROBOKASSA_LOGIN` | Merchant login identifier |
-| `ROBOKASSA_PASSWORD1` | Password for generating payment URL signatures (used when creating payment links) |
-| `ROBOKASSA_PASSWORD2` | Password for verifying payment result callbacks (used for ResultURL verification) |
-| `ROBOKASSA_PAYMENT_URL` | Payment page URL |
+| `ROBOKASSA_LOGIN` | Merchant login identifier (from Robokassa merchant profile) |
+| `ROBOKASSA_PASSWORD1` | **First password** - used to generate MD5 signatures for payment URLs (MerchantLogin:OutSum:InvId:Password1). Required for creating payment links. |
+| `ROBOKASSA_PASSWORD2` | **Second password** - used to verify MD5 signatures from Robokassa result callbacks (OutSum:InvId:Password2). Required for verifying payment notifications (ResultURL). **Not only for testing** - this is used in production to verify that payment notifications actually come from Robokassa. |
+| `ROBOKASSA_PAYMENT_URL` | Payment page URL (default: https://auth.robokassa.ru/Merchant/Index.aspx) |
 
 ## Workflow
 
@@ -1019,23 +1019,29 @@ The system integrates with Robokassa payment gateway to handle subscription purc
 7. Bot displays the payment link to the user
 8. User completes payment on Robokassa's website
 9. Robokassa sends a callback to `POST /payments/result`
-10. API verifies the MD5 signature using Password2
+10. API verifies the MD5 signature using **Password2** (OutSum:InvId:Password2)
 11. API marks payment as `paid` and upgrades user's plan
 12. API responds with `OK{InvId}` to confirm processing
+
+> **Security Note:** Password2 verification is essential in production. Without it, anyone could send fake payment notifications to your server claiming that payments were made.
 
 ### Signature Generation
 
 Payment links are secured using MD5 signatures. The signature is generated from:
 
 ```plain
-MD5({MerchantLogin}:{amount:.2f}:{InvId}:{Password1})
+# For Payment URL (when creating payment links):
+MD5(MerchantLogin:OutSum:InvId:Password1)
+
+# For ResultURL verification (when verifying payment callbacks):
+MD5(OutSum:InvId:Password2)
 ```
 
-For result verification:
+**Important:** Both Password1 and Password2 are required:
+- **Password1** - used when generating the payment link (client-side redirect)
+- **Password2** - used when verifying the ResultURL callback (server-side notification)
 
-```plain
-MD5({OutSum}:{InvId}:{Password2})
-```
+The Password2 verification is critical for production because it confirms that the payment notification actually came from Robokassa (not from a malicious third-party spoofing the callback).
 
 ### Invoice ID Format
 
@@ -1049,9 +1055,9 @@ The following environment variables are required for Robokassa integration:
 
 | Variable | Description |
 | ---------- | ------------- |
-| `ROBOKASSA_LOGIN` | Merchant login identifier |
-| `ROBOKASSA_PASSWORD1` | Password for signature generation |
-| `ROBOKASSA_PASSWORD2` | Password for result verification |
+| `ROBOKASSA_LOGIN` | Merchant login identifier (from Robokassa merchant profile) |
+| `ROBOKASSA_PASSWORD1` | First password - used for Payment URL signature (MerchantLogin:OutSum:InvId:Password1) |
+| `ROBOKASSA_PASSWORD2` | Second password - used for ResultURL verification (OutSum:InvId:Password2). **Required for production** to verify callback authenticity. |
 | `ROBOKASSA_PAYMENT_URL` | Payment page URL |
 
 ### Plan Types
