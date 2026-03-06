@@ -18,6 +18,7 @@ class EnvironmentSettings(BaseSettings):
     app_environment: AppEnvironment = Field(default=AppEnvironment.DEV)
     log_level: LogLevel = Field(default=LogLevel.DEBUG)
     debug: bool = Field(default=True)
+    headless: bool = Field(default=True)
 
     db_user: str = Field(default="postgres")
     db_password: str = Field(default="postgres")

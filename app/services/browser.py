@@ -24,7 +24,7 @@ class BrowserManager:
             os=["Windows"],
             platforms=["desktop"],
         )
-        self.headless = not config.environment.debug
+        self.headless = config.environment.headless
 
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None

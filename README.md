@@ -98,6 +98,36 @@ The project is organized as follows:
    uv run -m bot.main
    ```
 
+## Environment Variables
+
+The following environment variables are used in the project:
+
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `APP_ENVIRONMENT` | Application environment (`dev`, `prod`) | `prod` |
+| `LOG_LEVEL` | Logging level (`DEBUG`, `INFO`, etc.) | `INFO` |
+| `DEBUG` | Enable debug mode | `False` |
+| `HEADLESS` | Run Playwright browser in headless mode | `True` |
+| `DB_USER` | PostgreSQL username | `postgres` |
+| `DB_PASSWORD` | PostgreSQL password | `postgres` |
+| `DB_HOST` | PostgreSQL host | `localhost` |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_NAME` | PostgreSQL database name | `postgres` |
+| `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
+| `BOT_TOKEN` | Telegram bot token | - |
+| `API_BASE_URL` | API base URL | `localhost` |
+| `CORS_ALLOW_ORIGINS` | CORS allowed origins | `["*"]` |
+| `CORS_ALLOW_CREDENTIALS` | Allow CORS credentials | `True` |
+
+### Robokassa Variables
+
+| Variable | Description |
+| -------- | ----------- |
+| `ROBOKASSA_LOGIN` | Merchant login identifier |
+| `ROBOKASSA_PASSWORD1` | Password for generating payment URL signatures (used when creating payment links) |
+| `ROBOKASSA_PASSWORD2` | Password for verifying payment result callbacks (used for ResultURL verification) |
+| `ROBOKASSA_PAYMENT_URL` | Payment page URL |
+
 ## Workflow
 
 The Telegram bot interacts with the API service to parse Instagram reels. The typical workflow is as follows:
