@@ -23,13 +23,13 @@ class CreateRobokassaResponseSchema(BaseModel):
     """Schema for Robokassa payment creation response."""
 
     payment_url: str = Field(description="URL to Robokassa payment page")
-    invoice_id: str = Field(description="Unique invoice identifier")
+    invoice_id: int = Field(description="Unique invoice identifier")
 
     model_config = {
         "json_schema_extra": {
             "example": {
                 "payment_url": "https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=...",
-                "invoice_id": "INV_123456789_1708092300",
+                "invoice_id": "1708092300",
             }
         }
     }

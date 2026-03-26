@@ -1,7 +1,9 @@
 """Instagram Parsing API router for parsing reels from Instagram profiles."""
 
+import io
 from datetime import datetime
 
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from openpyxl.utils import get_column_letter
@@ -104,9 +106,6 @@ async def parse_reels_xlsx(
         }
         Response: Binary XLSX file download
     """
-    import io
-
-    import pandas as pd
 
     async with db.session() as session:
         account = await InstagramAccountDAO.get_least_used(session)

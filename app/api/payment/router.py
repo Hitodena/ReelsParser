@@ -1,5 +1,6 @@
 """Payment API router for handling Robokassa payments."""
 
+import hashlib
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -104,21 +105,26 @@ async def create_payment(
             )
 
         # Generate invoice ID
-        invoice_id = f"INV_{data.tg_id}_{int(datetime.now().timestamp())}"
+        invoice_id = int(
+            hashlib.md5(
+                f"{data.tg_id}{datetime.now().timestamp()}".encode()
+            ).hexdigest()[:7],
+            16,
+        )
 
         # Create payment record with plan_id
         await PaymentDAO.add(
             session,
             tg_user_id=user.id,
             plan_id=plan.id,  # Store plan_id for callback
-            invoice_id=invoice_id,
+            invoice_id=str(invoice_id),
             amount=plan.price,
             status="pending",
         )
 
         # Generate payment link (convert cents to rubles)
         payment_url = robokassa.generate_payment_link(
-            invoice_id=invoice_id,
+            invoice_id=int(invoice_id),
             amount=plan.price / 100,
             description=f"Оплата тарифа {plan.name.value}",
         )
@@ -192,14 +198,6 @@ async def payment_result(
         if not payment:
             return PlainTextResponse("Payment not found", status_code=404)
 
-        # Get the plan from payment (stored during creation)
-        # Payment model has plan relationship with lazy="joined"
-        payment_with_plan = await PaymentDAO.get_by_invoice(inv_id, session)
-        if not payment_with_plan:
-            return PlainTextResponse(
-                "Payment details not found", status_code=404
-            )
-
         # Get user to upgrade
         user = await TGUserDAO.get(session, payment.tg_user_id)
         if not user:
@@ -207,7 +205,7 @@ async def payment_result(
 
         # Upgrade user's plan using plan_id from payment
         await TGUserDAO.upgrade_plan(
-            user.telegram_id, payment_with_plan.plan_id, session
+            user.telegram_id, payment.plan_id, session
         )
         await session.commit()
 

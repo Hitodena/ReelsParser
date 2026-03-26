@@ -22,7 +22,7 @@ class RobokassaService:
 
     def generate_payment_link(
         self,
-        invoice_id: str,
+        invoice_id: int,
         amount: float,
         description: str,
     ) -> str:
@@ -42,13 +42,14 @@ class RobokassaService:
             >>> url = service.generate_payment_link("INV_123", 990.00, "Base plan")
         """
         # Generate MD5 signature: MerchantLogin:OutSum:InvId:Password1
+        formatted = f"{amount:.2f}"
         signature = hashlib.md5(
-            f"{self.login}:{amount:.2f}:{invoice_id}:{self.password1}".encode()
+            f"{self.login}:{formatted}:{invoice_id}:{self.password1}".encode()
         ).hexdigest()
 
         data = {
             "MerchantLogin": self.login,
-            "OutSum": amount,
+            "OutSum": formatted,
             "InvId": invoice_id,
             "Description": description,
             "SignatureValue": signature,
