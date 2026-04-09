@@ -41,7 +41,7 @@ class Timeouts(BaseModel):
         default=10, description="Timeout for selecting a element (in seconds)"
     )
     timeout_for_element_state: int = Field(
-        default=4, description="Timeout for element state (in seconds)"
+        default=20, description="Timeout for element state (in seconds)"
     )
 
 
