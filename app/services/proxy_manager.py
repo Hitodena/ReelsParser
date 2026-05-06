@@ -169,9 +169,9 @@ class ProxyManager:
         keys = [
             k
             for k in keys
-            if not k.startswith(self.proxy_block_key.encode())
-            and not k == self.proxy_sorted_key.encode()
-            and not k.endswith(b":sorted")
+            if not k.startswith(self.proxy_block_key)
+            and not k == self.proxy_sorted_key
+            and not k.endswith(":sorted")
         ]
 
         proxies = []
